@@ -1,0 +1,22 @@
+[package]
+name = "xtor"
+version = "0.1.0"
+authors = ["lemonhx <lemonhx@lemonhx.tech>"]
+edition = "2021"
+license = "MIT"
+documentation = "https://docs.rs/xtor/"
+homepage = "https://github.com/lemonhx/xtor"
+categories = ["actor", "asynchronous", "network-programming"]
+keywords = ["actor", "futures", "async", "xtor", "tokio"]
+readme = "README.md"
+
+[dependencies]
+tokio = {version = "^1", features = ["full"]}
+async-trait = "0.1"
+once_cell = "1.5"
+anyhow = { version = "1" }
+slab = "0.4"
+futures = "0.3"
+
+[features]
+sync = []
