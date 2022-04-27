@@ -17,6 +17,13 @@ once_cell = "1.5"
 anyhow = { version = "1" }
 slab = "0.4"
 futures = "0.3"
+lazy_static = "1"
+xtor_derive = { version = "0.1", path = "xtor_derive" }
+
+[workspace]
+members = [
+    "xtor_derive"
+]
 
 [features]
 sync = []

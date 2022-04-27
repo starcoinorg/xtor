@@ -1,0 +1,18 @@
+[package]
+name = "xtor_derive"
+version = "0.1.0"
+authors = ["lemonhx <lemonhx@lemonhx.tech>"]
+edition = "2021"
+license = "MIT"
+documentation = "https://docs.rs/xtor/"
+homepage = "https://github.com/lemonhx/xtor"
+categories = ["actor", "asynchronous", "network-programming"]
+keywords = ["actor", "futures", "async", "xtor", "tokio"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+syn = { version = "1", features = ["full"] }
+quote = "1"
