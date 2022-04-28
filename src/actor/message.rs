@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::{actor::Actor, context::Context};
 use anyhow::Result;
-use futures::{channel::mpsc, future};
+
 
 pub trait Message: 'static + Send {
     type Result: 'static + Send;

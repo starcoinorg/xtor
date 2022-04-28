@@ -1,11 +1,7 @@
 use anyhow::Result;
 use xtor::{
-    actor::{
-        actor::{Actor, ActorRunner},
-        context::Context,
-        message::Handler,
-    },
-    utils::broker::{Broker, DefaultBroker, Publish, Subscribe},
+    actor::{actor::Actor, context::Context, message::Handler},
+    utils::broker::{DefaultBroker, Publish, Subscribe},
 };
 
 struct EvenSubscriptor;
@@ -98,5 +94,5 @@ async fn main() {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         }
     });
-    h.await;
+    h.await.unwrap();
 }
