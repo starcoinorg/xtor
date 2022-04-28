@@ -20,7 +20,7 @@ use super::{
 };
 
 pub(crate) static ACTOR_ID: AtomicU64 = AtomicU64::new(0);
-pub(crate) const RUNNING_ACTOR_COUNTER: AtomicU64 = AtomicU64::new(0);
+pub(crate) static RUNNING_ACTOR_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 lazy_static! {
     pub static ref ACTOR_ID_NAME: RwLock<HashMap<u64, Option<String>>> =

@@ -42,6 +42,12 @@ impl Context {
             tx,
         )
     }
+
+    pub fn stop(&self) {
+        if let Some(tx) = self.tx.upgrade() {
+            tx.unbounded_send(Event::Stop(Ok(()))).unwrap();
+        }
+    }
 }
 
 impl Drop for Context {

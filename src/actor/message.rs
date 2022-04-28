@@ -3,7 +3,6 @@ use std::sync::Arc;
 use super::{actor::Actor, context::Context};
 use anyhow::Result;
 
-
 pub trait Message: 'static + Send {
     type Result: 'static + Send;
 }

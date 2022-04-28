@@ -21,6 +21,24 @@ lazy_static = "1"
 dashmap = "5.2"
 xtor_derive = { version = "0.1", path = "xtor_derive" }
 
+# bench marks and tests
+[dev-dependencies]
+criterion = {version = "0.3.2", features = ["html_reports"]}
+actix = "0.13.0"
+async-trait = "0.1.24"
+tokio-test = "0.4.2"
+xactor = { versino = "0.7.6", default-features = false, features = ["runtime-tokio"] }
+
+# [[bench]]
+# name = "sync_bench"
+# harness = false
+# path = "benches/bench_main_sync.rs"
+
+[[bench]]
+name = "async_bench"
+harness = false
+path = "benches/bench_main_async.rs"
+
 [workspace]
 members = [
     "xtor_derive"
