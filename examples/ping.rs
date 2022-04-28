@@ -1,12 +1,7 @@
 use anyhow::Result;
-use futures::join;
+use futures::{future::join, join};
 use std::{mem::MaybeUninit, sync::atomic::AtomicUsize};
-use xtor::actor::{
-    actor::{Actor, ActorRunner},
-    addr::Addr,
-    context::Context,
-    message::Handler,
-};
+use xtor::actor::{actor::Actor, addr::Addr, context::Context, message::Handler};
 
 #[xtor::message(result = "isize")]
 struct Ping(isize);
@@ -57,30 +52,31 @@ impl Handler<SetPingAddress> for PingActor {
 #[xtor::main]
 async fn main() {
     println!("Ping Pong!\nPress any key to exit");
-    let ping1 = PingActor {
+    let ping = PingActor {
         sleeper: 100,
         n: 1,
         counter: AtomicUsize::new(0),
         ping_address: unsafe { MaybeUninit::uninit().assume_init() },
     };
-    let ping2 = PingActor {
+    let pong = PingActor {
         sleeper: 200,
         n: -1,
         counter: AtomicUsize::new(0),
         ping_address: unsafe { MaybeUninit::uninit().assume_init() },
     };
-    let p1 = ActorRunner::new().run(ping1).await.unwrap();
-    let p2 = ActorRunner::new().run(ping2).await.unwrap();
-    join! {p1.set_name("ping"), p2.set_name("pong")};
+    let (ping_addr, pong_addr) = join(ping.spawn(), pong.spawn()).await;
+    let (ping_addr, pong_addr) = (ping_addr.unwrap(), pong_addr.unwrap());
+    join! {ping_addr.set_name("ping"), pong_addr.set_name("pong")};
     let _ = join! {
-        p1.call::<PingActor, SetPingAddress>(SetPingAddress(p2.clone())),
-        p2.call::<PingActor, SetPingAddress>(SetPingAddress(p1.clone()))
+        ping_addr.call::<PingActor, SetPingAddress>(SetPingAddress(pong_addr.clone())),
+        pong_addr.call::<PingActor, SetPingAddress>(SetPingAddress(ping_addr.clone()))
     };
 
-    p1.call::<PingActor, Ping>(Ping(0)).await.unwrap();
+    ping_addr.call::<PingActor, Ping>(Ping(0)).await.unwrap();
 
     let mut buffer = String::new();
     std::io::stdin().read_line(&mut buffer).unwrap();
-    p1.clone().stop(Ok(()));
-    p2.clone().stop(Ok(()));
+
+    ping_addr.clone().stop(Ok(()));
+    pong_addr.clone().stop(Ok(()));
 }

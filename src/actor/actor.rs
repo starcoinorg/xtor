@@ -33,12 +33,23 @@ pub type ActorID = u64;
 
 #[async_trait::async_trait]
 pub trait Actor: Send + Sync + 'static {
+    /// hook for actor initialization
     async fn on_start(&self, _ctx: &Context) -> Result<()> {
         Ok(())
     }
+    /// hook for actor shutdown
     async fn on_stop(&self, _ctx: &Context) {}
+    /// check the name of the actor
     async fn get_name(&self, ctx: &Context) -> Option<String> {
         ACTOR_ID_NAME.read().await[&ctx.id].clone()
+    }
+    /// starting an actor
+    /// `?Sized` actor is not supported
+    async fn spawn(self) -> Result<Addr>
+    where
+        Self: Sized,
+    {
+        ActorRunner::new().run(self).await
     }
 }
 

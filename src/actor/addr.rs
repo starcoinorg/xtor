@@ -1,5 +1,7 @@
+use std::hash::Hash;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::Weak;
 use std::time::Duration;
 
 use super::actor::ActorID;
@@ -33,7 +35,7 @@ pub enum Event {
 
 #[derive(Clone)]
 pub struct Addr {
-    pub(crate) id: ActorID,
+    pub id: ActorID,
     pub(crate) tx: Arc<mpsc::UnboundedSender<Event>>,
     pub(crate) rx_exit: Shared<oneshot::Receiver<()>>,
 }
@@ -66,7 +68,7 @@ impl Addr {
             Box::pin(async move {
                 let handler = match actor.as_ref().downcast_ref::<A>() {
                     Some(handler) => Ok(handler),
-                    None => Err(anyhow::anyhow!("error: you are trying to handle a message in actor which you didn't implement the handler trait {} for it", std::any::type_name::<dyn Handler::<T>>())),
+                    None => Err(anyhow::anyhow!("error: {} trying to handle a message in actor which you didn't implement the handler trait {} for it", std::any::type_name_of_val(&actor), std::any::type_name::<dyn Handler::<T>>())),
                 }?;
                 let res = handler.handle(ctx, msg).await?;
                 let _ = tx.send(res);
@@ -78,7 +80,6 @@ impl Addr {
 
     pub async fn proxy<A: Handler<T>, T: Message>(&self) -> Proxy<T> {
         let weak_tx = Arc::downgrade(&self.tx);
-
         let inner: ProxyFnBlock<T> = Box::new(move |msg| {
             let weak_tx = weak_tx.clone();
             Box::pin(async move {
@@ -90,7 +91,7 @@ impl Addr {
                         Box::pin(async move {
                             let handler = match actor.as_ref().downcast_ref::<A>() {
                                 Some(handler) => Ok(handler),
-                                None => Err(anyhow::anyhow!("error: you are trying to handle a message in actor which you didn't implement the handler trait {} for it", std::any::type_name::<dyn Handler::<T>>())),
+                                None => Err(anyhow::anyhow!("error: {} trying to handle a message in actor which you didn't implement the handler trait {} for it", std::any::type_name_of_val(&actor), std::any::type_name::<dyn Handler::<T>>())),
                             }?;
                             let res = handler.handle(ctx, msg).await?;
                             let _ = tx.send(res);
@@ -130,10 +131,56 @@ impl Addr {
             .await
             .insert(self.id, Some(name.into()));
     }
+
+    pub fn downgrade(&self) -> WeakAddr {
+        WeakAddr {
+            id: self.id.clone(),
+            _tx: Arc::downgrade(&self.tx),
+            _rx_exit: self.rx_exit.clone(),
+        }
+    }
 }
 
 impl std::fmt::Debug for Addr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "<Addr: {}>", self.id)
+    }
+}
+
+impl Hash for Addr {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+pub struct WeakAddr {
+    pub id: ActorID,
+    pub(crate) _tx: Weak<mpsc::UnboundedSender<Event>>,
+    pub(crate) _rx_exit: Shared<oneshot::Receiver<()>>,
+}
+
+impl WeakAddr {
+    pub fn upgrade(&self) -> Option<Addr> {
+        if let Some(tx) = self._tx.upgrade() {
+            Some(Addr {
+                id: self.id.clone(),
+                tx: tx,
+                rx_exit: self._rx_exit.clone(),
+            })
+        } else {
+            None
+        }
+    }
+}
+
+impl std::fmt::Debug for WeakAddr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<Addr?: {}>", self.id)
+    }
+}
+
+impl Hash for WeakAddr {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
     }
 }

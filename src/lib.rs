@@ -1,3 +1,4 @@
+#![feature(type_name_of_val)]
 use std::collections::HashMap;
 
 use actor::actor::ACTOR_ID_HANDLE;
@@ -10,6 +11,7 @@ pub use xtor_derive::main;
 pub use xtor_derive::message;
 
 pub mod actor;
+pub mod utils;
 
 #[inline(always)]
 pub async fn await_exit() {
