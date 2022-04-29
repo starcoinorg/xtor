@@ -8,13 +8,14 @@
   - [x] runtime
 - [ ] finish basic utils
   - [ ] supervisor
-  - [ ] broker
+  - [x] broker
   - [ ] service
   - [x] proxy
 - [ ] sync actor
   - [ ] sync context
   - [ ] sync runtime
 - [ ] stream processing
+  - [x] by broker
 
 ### Issues and bug fix
 - [ ] #1
