@@ -1,4 +1,5 @@
 # Xtor: An actor async actor framework.
+[![Rust](https://github.com/starcoinorg/xtor/actions/workflows/rust.yml/badge.svg)](https://github.com/starcoinorg/xtor/actions/workflows/rust.yml)
 
 ## Key features
 - small: very small codebase
