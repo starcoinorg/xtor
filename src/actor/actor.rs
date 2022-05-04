@@ -94,7 +94,13 @@ impl ActorRunner {
                         break;
                     }
                     Event::Exec(f) => {
-                        f(actor.clone(), &ctx).await.unwrap();
+                        match f(actor.clone(), &ctx).await {
+                            Ok(_) => {}
+                            Err(err) => {
+                                exit_err = Err(err);
+                                break;
+                            }
+                        }
                     }
                 }
             }
