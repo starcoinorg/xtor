@@ -8,7 +8,7 @@ use criterion::{BenchmarkId, Criterion};
 
 pub fn bench_actix(c: &mut Criterion) {
     let tests = gen_tests("actix");
-    let mut group = c.benchmark_group("xtor");
+    let mut group = c.benchmark_group("actix");
     for spec in tests {
         group.bench_with_input(BenchmarkId::from_parameter(&spec), &spec, |b, spec| {
             b.iter(|| actix::run(*spec));
@@ -18,7 +18,7 @@ pub fn bench_actix(c: &mut Criterion) {
 }
 pub fn bench_xactor(c: &mut Criterion) {
     let tests = gen_tests("xactor");
-    let mut group = c.benchmark_group("xtor");
+    let mut group = c.benchmark_group("xactor");
     for spec in tests {
         group.bench_with_input(BenchmarkId::from_parameter(&spec), &spec, |b, spec| {
             b.iter(|| xactor::run(*spec));
