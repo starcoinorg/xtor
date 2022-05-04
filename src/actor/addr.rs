@@ -78,6 +78,23 @@ impl Addr {
         Ok(rx)
     }
 
+    /// Ok(None) means it is timeout
+    /// Ok(Some(res)) means it is not timeout
+    /// Err(e) means it is not timeout but with error occurred
+    pub async fn call_timeout<A: Handler<T>, T: Message>(
+        &self,
+        msg: T,
+        timeout: Duration,
+    ) -> anyhow::Result<Option<T::Result>> {
+        let chan = self.call_unblock::<A, T>(msg).await?;
+        tokio::select! {
+            res = chan =>  {
+                res.map_err(|e| e.into()).map(|x| Some(x))
+            }
+            _ = tokio::time::sleep(timeout) => Ok(None)
+        }
+    }
+
     pub async fn proxy<A: Handler<T>, T: Message>(&self) -> Proxy<T> {
         let weak_tx = Arc::downgrade(&self.tx);
         let inner: ProxyFnBlock<T> = Box::new(move |msg| {

@@ -4,7 +4,7 @@ mod xtor;
 
 use std::fmt::Display;
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion};
 
 pub fn bench_actix(c: &mut Criterion) {
     let tests = gen_tests("actix");

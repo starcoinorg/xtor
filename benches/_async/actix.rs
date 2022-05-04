@@ -25,7 +25,7 @@ impl actix::Handler<SleepAddOne> for CounterActor {
 }
 
 pub fn run(spec: super::Spec) {
-    let mut runtime = actix::System::new();
+    let runtime = actix::System::new();
     let addr = CounterActor { count: 0 };
     runtime.block_on(async {
         let addr = addr.start();

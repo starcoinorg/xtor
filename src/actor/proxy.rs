@@ -26,6 +26,20 @@ impl<T: Message> Proxy<T> {
     pub async fn call(&self, msg: T) -> Result<T::Result> {
         self.proxy_inner.lock().await(msg).await
     }
+
+    pub async fn call_timeout(
+        &self,
+        msg: T,
+        timeout: std::time::Duration,
+    ) -> Result<Option<T::Result>> {
+        tokio::select! {
+            res = self.proxy_inner.lock().await(msg) => {
+            res.map_err(|e| e.into()).map(|x| Some(x))
+        }
+            _ = tokio::time::sleep(timeout) => Ok(None)
+        }
+    }
+
     pub async fn call_unblock(&self, msg: T) -> ProxyRetBlock<T> {
         self.proxy_inner.lock().await(msg)
     }

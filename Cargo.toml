@@ -28,6 +28,7 @@ actix = "0.13.0"
 async-trait = "0.1.24"
 tokio-test = "0.4.2"
 xactor = { versino = "0.7.6", default-features = false, features = ["runtime-tokio"] }
+rand = "*"
 
 # [[bench]]
 # name = "sync_bench"
