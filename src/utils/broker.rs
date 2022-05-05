@@ -13,11 +13,11 @@ use futures::{Stream, StreamExt};
 use tokio::task::JoinHandle;
 
 use crate::actor::{
-    runner::Actor,
     addr::{Addr, WeakAddr},
     context::Context,
     message::{Handler, Message},
     proxy::Proxy,
+    runner::Actor,
 };
 
 #[async_trait::async_trait]

@@ -1,9 +1,9 @@
 use anyhow::Result;
 use std::sync::atomic::AtomicUsize;
 use xtor::actor::{
-    runner::{Actor, ActorRunner},
     context::Context,
     message::Handler,
+    runner::{Actor, ActorRunner},
 };
 
 #[xtor::message(result = "()")]

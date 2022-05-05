@@ -1,7 +1,7 @@
 use crate::actor::{
-    runner::{Actor, ActorID},
     addr::Addr,
     message::{Handler, Message},
+    runner::{Actor, ActorID},
 };
 
 /// The supervisor is responsible for restarting actors.

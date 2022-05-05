@@ -4,7 +4,7 @@ use anyhow::Result;
 use dashmap::DashMap;
 use lazy_static::lazy_static;
 
-use crate::actor::{runner::Actor, addr::Addr};
+use crate::actor::{addr::Addr, runner::Actor};
 
 pub type Registry = DashMap<TypeId, Arc<dyn Service>>;
 

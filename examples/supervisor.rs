@@ -16,10 +16,10 @@ use std::sync::atomic::AtomicBool;
 use rand::{prelude::StdRng, Rng, SeedableRng};
 use xtor::{
     actor::{
-        runner::{Actor, ActorRestart},
         addr::WeakAddr,
         context::Context,
         message::Handler,
+        runner::{Actor, ActorRestart},
         supervisor::Supervise,
     },
     utils::default_supervisor::DefaultSupervisor,

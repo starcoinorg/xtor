@@ -8,9 +8,9 @@ use once_cell::sync::OnceCell;
 use tokio::sync::RwLock;
 
 use super::{
-    runner::{ActorID, ACTOR_ID, RUNNING_ACTOR_COUNTER},
     addr::{Event, WeakAddr},
     proxy::Proxy,
+    runner::{ActorID, ACTOR_ID, RUNNING_ACTOR_COUNTER},
     supervisor::Restart,
 };
 

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use super::{runner::Actor, context::Context};
+use super::{context::Context, runner::Actor};
 use anyhow::Result;
 
 pub trait Message: 'static + Send {

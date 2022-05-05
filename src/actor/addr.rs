@@ -4,13 +4,13 @@ use std::sync::Arc;
 use std::sync::Weak;
 use std::time::Duration;
 
-use super::runner::ActorID;
-use super::runner::ACTOR_ID_NAME;
 use super::context::Context;
 use super::message::Handler;
 use super::message::Message;
 use super::proxy::Proxy;
 use super::proxy::ProxyFnBlock;
+use super::runner::ActorID;
+use super::runner::ACTOR_ID_NAME;
 use super::supervisor::Restart;
 use anyhow::Result;
 use futures::channel::mpsc;
@@ -63,10 +63,7 @@ impl Addr {
     }
 
     pub async fn call<A: Handler<T>, T: Message>(&self, msg: T) -> anyhow::Result<T::Result> {
-        self.call_unblock::<A, T>(msg)
-            .await
-            .await?
-
+        self.call_unblock::<A, T>(msg).await.await?
     }
 
     pub async fn call_unblock<A: Handler<T>, T: Message>(

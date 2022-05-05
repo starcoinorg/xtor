@@ -4,10 +4,10 @@ use dashmap::DashMap;
 use futures::{channel::mpsc, lock::Mutex};
 
 use crate::actor::{
-    runner::{Actor, ActorID},
     addr::Addr,
     context::Context,
     message::Handler,
+    runner::{Actor, ActorID},
     supervisor::{Restart, Supervise, Supervisor, Unsupervise},
 };
 

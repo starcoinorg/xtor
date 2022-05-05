@@ -4,7 +4,7 @@ use futures::{lock::Mutex, Future};
 
 use anyhow::Result;
 
-use super::{runner::ActorID, message::Message};
+use super::{message::Message, runner::ActorID};
 
 pub(crate) type ProxyRetBlock<T> =
     Pin<Box<dyn Future<Output = Result<<T as Message>::Result>> + Send + 'static>>;

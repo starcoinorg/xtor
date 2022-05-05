@@ -3,10 +3,10 @@ use futures::{future::join, join};
 use once_cell::sync::OnceCell;
 use std::{mem::MaybeUninit, sync::atomic::AtomicUsize};
 use xtor::actor::{
-    runner::Actor,
     addr::{Addr, WeakAddr},
     context::Context,
     message::Handler,
+    runner::Actor,
 };
 
 #[xtor::message(result = "isize")]
@@ -43,7 +43,10 @@ impl Handler<Ping> for PingActor {
                     .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                 Ok(msg.0 + 1)
             }
-            None => {ctx.stop(); Ok(msg.0)},
+            None => {
+                ctx.stop();
+                Ok(msg.0)
+            }
         }
     }
 }
