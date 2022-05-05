@@ -1,6 +1,6 @@
 use anyhow::Result;
 use xtor::{
-    actor::{actor::Actor, context::Context, message::Handler},
+    actor::{runner::Actor, context::Context, message::Handler},
     utils::broker::{DefaultBroker, Publish, Subscribe},
 };
 

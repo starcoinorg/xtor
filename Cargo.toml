@@ -30,11 +30,6 @@ tokio-test = "0.4.2"
 xactor = { versino = "0.7.6", default-features = false, features = ["runtime-tokio"] }
 rand = "*"
 
-# [[bench]]
-# name = "sync_bench"
-# harness = false
-# path = "benches/bench_main_sync.rs"
-
 [[bench]]
 name = "async_bench"
 harness = false

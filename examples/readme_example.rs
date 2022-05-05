@@ -1,6 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use xtor::actor::{actor::Actor, context::Context, message::Handler};
+use xtor::actor::{runner::Actor, context::Context, message::Handler};
 
 // first define actor
 struct Xxx;

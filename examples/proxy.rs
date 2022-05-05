@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::sync::atomic::AtomicUsize;
 use xtor::actor::{
-    actor::{Actor, ActorRunner},
+    runner::{Actor, ActorRunner},
     context::Context,
     message::Handler,
 };

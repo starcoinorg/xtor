@@ -1,6 +1,6 @@
 use rand::{prelude::StdRng, Rng, SeedableRng};
 
-use xtor::actor::{actor::Actor, context::Context, message::Handler};
+use xtor::actor::{runner::Actor, context::Context, message::Handler};
 
 struct Oracle;
 

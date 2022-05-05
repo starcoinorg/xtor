@@ -4,7 +4,7 @@ use futures::{lock::Mutex, Future};
 
 use anyhow::Result;
 
-use super::{actor::ActorID, message::Message};
+use super::{runner::ActorID, message::Message};
 
 pub(crate) type ProxyRetBlock<T> =
     Pin<Box<dyn Future<Output = Result<<T as Message>::Result>> + Send + 'static>>;
@@ -34,8 +34,8 @@ impl<T: Message> Proxy<T> {
     ) -> Result<Option<T::Result>> {
         tokio::select! {
             res = self.proxy_inner.lock().await(msg) => {
-            res.map_err(|e| e.into()).map(|x| Some(x))
-        }
+                res.map( Some )
+            }
             _ = tokio::time::sleep(timeout) => Ok(None)
         }
     }

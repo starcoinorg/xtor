@@ -2,7 +2,7 @@ use std::sync::atomic::AtomicUsize;
 
 use futures::Stream;
 use xtor::{
-    actor::{actor::Actor, context::Context, message::Handler},
+    actor::{runner::Actor, context::Context, message::Handler},
     utils::broker::{DefaultBroker, StreamBroker, Subscribe},
 };
 

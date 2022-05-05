@@ -13,7 +13,7 @@ use futures::{Stream, StreamExt};
 use tokio::task::JoinHandle;
 
 use crate::actor::{
-    actor::Actor,
+    runner::Actor,
     addr::{Addr, WeakAddr},
     context::Context,
     message::{Handler, Message},
@@ -69,6 +69,12 @@ impl<T: Message + Sync + Clone> DefaultBroker<T> {
             subscriptions: DashMap::new(),
             _marker: PhantomData,
         }
+    }
+}
+
+impl<T: Message + Sync + Clone> Default for DefaultBroker<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

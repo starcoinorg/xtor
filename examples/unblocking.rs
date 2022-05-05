@@ -1,6 +1,6 @@
 use rand::{prelude::StdRng, Rng, SeedableRng};
 
-use xtor::actor::{actor::Actor, context::Context, message::Handler};
+use xtor::actor::{runner::Actor, context::Context, message::Handler};
 
 struct Oracle;
 
@@ -28,25 +28,22 @@ async fn main() {
     while start.elapsed().as_secs() < 10 {
         let oracle1_number = oracle1
             .call_unblock::<Oracle, GetOracleNumber>(GetOracleNumber)
-            .await
-            .unwrap();
+            .await;
         let oracle2_number = oracle2
             .call_unblock::<Oracle, GetOracleNumber>(GetOracleNumber)
-            .await
-            .unwrap();
+            .await;
         let oracle3_number = oracle3
             .call_unblock::<Oracle, GetOracleNumber>(GetOracleNumber)
-            .await
-            .unwrap();
+            .await;
         tokio::select! {
             o1 = oracle1_number => {
-                println!("oracle1: {}", o1.unwrap());
+                println!("oracle1: {}", o1.unwrap().unwrap());
             },
             o2 = oracle2_number => {
-                println!("oracle2: {}", o2.unwrap());
+                println!("oracle2: {}", o2.unwrap().unwrap());
             },
             o3 = oracle3_number => {
-                println!("oracle3: {}", o3.unwrap());
+                println!("oracle3: {}", o3.unwrap().unwrap());
             },
             _ = tokio::time::sleep(std::time::Duration::from_millis(1000)) => {
                 println!("no oracle in this second");

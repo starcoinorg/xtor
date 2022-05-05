@@ -6,10 +6,10 @@
   - [x] create
   - [x] destroy
   - [x] runtime
-- [ ] finish basic utils
-  - [ ] supervisor
+- [x] finish basic utils
+  - [x] supervisor
   - [x] broker
-  - [ ] service
+  - [x] service
   - [x] proxy
 - [ ] sync actor
   - [ ] sync context

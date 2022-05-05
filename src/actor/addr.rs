@@ -4,13 +4,14 @@ use std::sync::Arc;
 use std::sync::Weak;
 use std::time::Duration;
 
-use super::actor::ActorID;
-use super::actor::ACTOR_ID_NAME;
+use super::runner::ActorID;
+use super::runner::ACTOR_ID_NAME;
 use super::context::Context;
 use super::message::Handler;
 use super::message::Message;
 use super::proxy::Proxy;
 use super::proxy::ProxyFnBlock;
+use super::supervisor::Restart;
 use anyhow::Result;
 use futures::channel::mpsc;
 use futures::channel::oneshot;
@@ -29,8 +30,8 @@ pub static mut ACTOR_STOP_WAIT_INTERVAL: Duration = std::time::Duration::from_mi
 pub enum Event {
     Stop(Result<()>),
     Exec(ExecFn),
-    // TODO: Link to supervisor
-    // TODO: Subscribe to Broker
+    Restart,
+    AddSupervisor(Proxy<Restart>),
 }
 
 #[derive(Clone)]
@@ -41,6 +42,15 @@ pub struct Addr {
 }
 
 impl Addr {
+    pub async fn get_name(&self) -> Option<String> {
+        ACTOR_ID_NAME.read().await[&self.id].clone()
+    }
+
+    pub async fn add_supervisor(&self, supervisor: Proxy<Restart>) {
+        let _ =
+            mpsc::UnboundedSender::clone(&*self.tx).start_send(Event::AddSupervisor(supervisor));
+    }
+
     /// send stop event to the actor
     pub fn stop(self, err: Result<()>) {
         let _ = mpsc::UnboundedSender::clone(&*self.tx).start_send(Event::Stop(err));
@@ -54,28 +64,30 @@ impl Addr {
 
     pub async fn call<A: Handler<T>, T: Message>(&self, msg: T) -> anyhow::Result<T::Result> {
         self.call_unblock::<A, T>(msg)
-            .await?
             .await
-            .map_err(|e| e.into())
+            .await?
+
     }
 
     pub async fn call_unblock<A: Handler<T>, T: Message>(
         &self,
         msg: T,
-    ) -> anyhow::Result<oneshot::Receiver<T::Result>> {
+    ) -> oneshot::Receiver<anyhow::Result<T::Result>> {
         let (tx, rx) = oneshot::channel();
-        mpsc::UnboundedSender::clone(&*self.tx).start_send(Event::Exec(Box::new(move |actor, ctx| {
+        let _ = mpsc::UnboundedSender::clone(&*self.tx).start_send(Event::Exec(Box::new(move |actor, ctx| {
             Box::pin(async move {
-                let handler = match actor.as_ref().downcast_ref::<A>() {
-                    Some(handler) => Ok(handler),
+                match actor.as_ref().downcast_ref::<A>() {
+                    Some(handler) => {
+                        match handler.handle(ctx, msg).await {
+                            Ok(res) => {let _ = tx.send(Ok(res));Ok(())},
+                            Err(e) => Err(e),
+                        }
+                    },
                     None => Err(anyhow::anyhow!("error: {} trying to handle a message in actor which you didn't implement the handler trait {} for it", std::any::type_name_of_val(&actor), std::any::type_name::<dyn Handler::<T>>())),
-                }?;
-                let res = handler.handle(ctx, msg).await?;
-                let _ = tx.send(res);
-                Ok(())
+                }
             })
-        })))?;
-        Ok(rx)
+        })));
+        rx
     }
 
     /// Ok(None) means it is timeout
@@ -86,15 +98,16 @@ impl Addr {
         msg: T,
         timeout: Duration,
     ) -> anyhow::Result<Option<T::Result>> {
-        let chan = self.call_unblock::<A, T>(msg).await?;
+        let chan = self.call_unblock::<A, T>(msg).await;
         tokio::select! {
             res = chan =>  {
-                res.map_err(|e| e.into()).map(|x| Some(x))
+                res.map(|x| x.ok()).map_err(|e| e.into())
             }
             _ = tokio::time::sleep(timeout) => Ok(None)
         }
     }
 
+    /// FIXME: this is wrong! look at call_unblock
     pub async fn proxy<A: Handler<T>, T: Message>(&self) -> Proxy<T> {
         let weak_tx = Arc::downgrade(&self.tx);
         let inner: ProxyFnBlock<T> = Box::new(move |msg| {
@@ -120,7 +133,7 @@ impl Addr {
         });
 
         Proxy {
-            id: self.id.clone(),
+            id: self.id,
             proxy_inner: Mutex::new(inner),
         }
     }
@@ -151,7 +164,7 @@ impl Addr {
 
     pub fn downgrade(&self) -> WeakAddr {
         WeakAddr {
-            id: self.id.clone(),
+            id: self.id,
             _tx: Arc::downgrade(&self.tx),
             _rx_exit: self.rx_exit.clone(),
         }
@@ -178,15 +191,11 @@ pub struct WeakAddr {
 
 impl WeakAddr {
     pub fn upgrade(&self) -> Option<Addr> {
-        if let Some(tx) = self._tx.upgrade() {
-            Some(Addr {
-                id: self.id.clone(),
-                tx: tx,
-                rx_exit: self._rx_exit.clone(),
-            })
-        } else {
-            None
-        }
+        self._tx.upgrade().map(|tx| Addr {
+            id: self.id,
+            tx,
+            rx_exit: self._rx_exit.clone(),
+        })
     }
 }
 

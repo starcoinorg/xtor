@@ -1,6 +1,6 @@
 use std::sync::atomic::AtomicUsize;
 
-use xtor::actor::{actor::Actor, context::Context, message::Handler};
+use xtor::actor::{runner::Actor, context::Context, message::Handler};
 
 struct CounterActor {
     count: AtomicUsize,
