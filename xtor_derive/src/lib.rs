@@ -80,7 +80,7 @@ pub fn main(_args: TokenStream, input: TokenStream) -> TokenStream {
         #input
 
         fn main() #ret {
-            xtor::block_on(async{__main().await; xtor::await_exit().await;})
+            xtor::block_on(async{let res = __main().await; xtor::await_exit().await; res})
         }
     };
 

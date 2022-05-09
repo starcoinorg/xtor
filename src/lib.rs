@@ -1,5 +1,4 @@
 #![feature(type_name_of_val)]
-use std::collections::HashMap;
 
 use actor::runner::ACTOR_ID_HANDLE;
 use futures::{future::join_all, Future};

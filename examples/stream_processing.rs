@@ -1,9 +1,11 @@
 use std::sync::atomic::AtomicUsize;
 
-use futures::Stream;
+use futures::{Stream, StreamExt};
+use tokio::task::JoinHandle;
 use xtor::{
     actor::{context::Context, message::Handler, runner::Actor},
-    utils::broker::{DefaultBroker, StreamBroker, Subscribe},
+    utils::broker::{DefaultBroker, Publish, Subscribe},
+    Addr, Message,
 };
 
 #[derive(Debug, Clone)]
@@ -29,6 +31,29 @@ impl Stream for RangeStream {
         } else {
             std::task::Poll::Ready(None)
         }
+    }
+}
+
+pub struct StreamBroker<S: Stream<Item = I> + Sync + Send + 'static, I: Message + Clone>(pub S);
+impl<S: Stream<Item = I> + Sync + Send + 'static, I: Message + Clone> Actor for StreamBroker<S, I> {}
+
+impl<S: Stream<Item = I> + Sync + Send + 'static + Unpin, I: Message + Sync + Clone>
+    StreamBroker<S, I>
+{
+    pub async fn spawn(mut self) -> anyhow::Result<(Addr, JoinHandle<anyhow::Result<()>>)> {
+        let broker = DefaultBroker::<I>::new().spawn().await?;
+        let broker_a = broker.clone();
+        Ok((
+            broker,
+            tokio::spawn(async move {
+                while let Some(msg) = self.0.next().await {
+                    broker_a
+                        .call::<DefaultBroker<I>, Publish<I>>(Publish(msg))
+                        .await?;
+                }
+                Ok(())
+            }),
+        ))
     }
 }
 

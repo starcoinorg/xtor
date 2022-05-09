@@ -3,7 +3,7 @@
 // food has two types: normal and poisoned.
 // normal food is good for human.
 // poisoned food will kill human.
-// food_hospital is a supervisor that can respawn(lol) a human.
+// normal_hospital is a supervisor that can respawn(lol) a human.
 
 // another thing is called virus.
 // virus is contagious.
@@ -39,11 +39,7 @@ impl ActorRestart for Human {
     async fn on_restart(&self, addr: &WeakAddr) {
         println!(
             "\thospital saved {}",
-            addr.upgrade()
-                .unwrap()
-                .get_name()
-                .await
-                .unwrap_or(format!("actor {}", addr.id))
+            addr.upgrade().unwrap().get_name_or_id_string().await
         );
         self.0.store(false, std::sync::atomic::Ordering::SeqCst);
     }
@@ -63,21 +59,13 @@ impl Handler<Eat> for Human {
     async fn handle(&self, ctx: &Context, msg: Eat) -> anyhow::Result<()> {
         match msg.0 {
             Food::Normal(food) => {
-                println!(
-                    "{} eat {:?}",
-                    self.get_name(ctx)
-                        .await
-                        .unwrap_or(format!("actor {}", ctx.id)),
-                    food
-                );
+                println!("{} eat {:?}", self.get_name_or_id_string(ctx).await, food);
                 Ok(())
             }
             Food::Poisoned(food) => {
                 println!(
                     "{} eat {:?}, and dead",
-                    self.get_name(ctx)
-                        .await
-                        .unwrap_or(format!("actor {}", ctx.id)),
+                    self.get_name_or_id_string(ctx).await,
                     food
                 );
                 self.0.store(true, std::sync::atomic::Ordering::SeqCst);
@@ -95,9 +83,7 @@ impl Handler<Virus> for Human {
     async fn handle(&self, ctx: &Context, _msg: Virus) -> anyhow::Result<()> {
         println!(
             "{} infected, and dead",
-            self.get_name(ctx)
-                .await
-                .unwrap_or(format!("actor {}", ctx.id))
+            self.get_name_or_id_string(ctx).await
         );
         self.0.store(true, std::sync::atomic::Ordering::SeqCst);
         Err(anyhow::anyhow!("dead"))
@@ -105,7 +91,7 @@ impl Handler<Virus> for Human {
 }
 
 #[xtor::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     let system_running_duration = 10;
     let normal_hospital = DefaultSupervisor::new(
         xtor::utils::default_supervisor::DefaultSupervisorRestartStrategy::OneForOne,
@@ -121,67 +107,45 @@ async fn main() {
     .await
     .unwrap();
 
+    let normal_hospital_proxy = normal_hospital
+        .proxy::<DefaultSupervisor, Supervise>()
+        .await;
+    let virus_hospital_proxy = virus_hospital.proxy::<DefaultSupervisor, Supervise>().await;
+
     let alice = Human::default()
-        .spawn_supervised::<DefaultSupervisor>(&normal_hospital)
-        .await
-        .unwrap();
+        .spawn_supervisable()
+        .await?
+        .chain_link_to_supervisor(&normal_hospital_proxy)
+        .await?
+        .chain_link_to_supervisor(&virus_hospital_proxy)
+        .await?;
     let bob = Human::default()
-        .spawn_supervised::<DefaultSupervisor>(&normal_hospital)
-        .await
-        .unwrap();
+        .spawn_supervisable()
+        .await?
+        .chain_link_to_supervisor(&normal_hospital_proxy)
+        .await?;
+    // bob said that he has a very strong body
+    // thus virus could not come out so he decided to only paying the normal hospital
+
     let carl = Human::default()
-        .spawn_supervised::<DefaultSupervisor>(&normal_hospital)
-        .await
-        .unwrap();
+        .spawn_supervisable()
+        .await?
+        .chain_link_to_supervisor(&normal_hospital_proxy)
+        .await?
+        .chain_link_to_supervisor(&virus_hospital_proxy)
+        .await?;
     let david = Human::default()
-        .spawn_supervised::<DefaultSupervisor>(&normal_hospital)
-        .await
-        .unwrap();
+        .spawn_supervisable()
+        .await?
+        .chain_link_to_supervisor(&normal_hospital_proxy)
+        .await?
+        .chain_link_to_supervisor(&virus_hospital_proxy)
+        .await?;
 
     alice.set_name("Alice").await;
     bob.set_name("Bob").await;
     carl.set_name("Carl").await;
     david.set_name("David").await;
-
-    // register to normal hospital
-    {
-        normal_hospital
-            .call::<DefaultSupervisor, Supervise>(Supervise(alice.clone()))
-            .await
-            .unwrap();
-        normal_hospital
-            .call::<DefaultSupervisor, Supervise>(Supervise(bob.clone()))
-            .await
-            .unwrap();
-        normal_hospital
-            .call::<DefaultSupervisor, Supervise>(Supervise(carl.clone()))
-            .await
-            .unwrap();
-        normal_hospital
-            .call::<DefaultSupervisor, Supervise>(Supervise(david.clone()))
-            .await
-            .unwrap();
-    }
-
-    // register to virus hospital
-    {
-        virus_hospital
-            .call::<DefaultSupervisor, Supervise>(Supervise(alice.clone()))
-            .await
-            .unwrap();
-
-        // bob said that he has a very strong body
-        // thus virus could not come out so he decided to only paying the normal hospital
-
-        virus_hospital
-            .call::<DefaultSupervisor, Supervise>(Supervise(carl.clone()))
-            .await
-            .unwrap();
-        virus_hospital
-            .call::<DefaultSupervisor, Supervise>(Supervise(david.clone()))
-            .await
-            .unwrap();
-    }
 
     let humans = [alice.clone(), bob.clone(), carl.clone(), david.clone()];
     let food_feeder = tokio::task::spawn(async move {
@@ -214,4 +178,5 @@ async fn main() {
 
     food_feeder.await.unwrap();
     virus_inflecter.await.unwrap();
+    Ok(())
 }

@@ -9,8 +9,6 @@
 use std::{marker::PhantomData, sync::atomic::AtomicU64};
 
 use dashmap::DashMap;
-use futures::{Stream, StreamExt};
-use tokio::task::JoinHandle;
 
 use crate::actor::{
     addr::{Addr, WeakAddr},
@@ -110,26 +108,3 @@ impl<T: Message + Sync + Clone> Handler<Publish<T>> for DefaultBroker<T> {
 }
 
 impl<T: Message + Sync + Clone> Broker<T> for DefaultBroker<T> {}
-
-pub struct StreamBroker<S: Stream<Item = I> + Sync + Send + 'static, I: Message + Clone>(pub S);
-impl<S: Stream<Item = I> + Sync + Send + 'static, I: Message + Clone> Actor for StreamBroker<S, I> {}
-
-impl<S: Stream<Item = I> + Sync + Send + 'static + Unpin, I: Message + Sync + Clone>
-    StreamBroker<S, I>
-{
-    pub async fn spawn(mut self) -> anyhow::Result<(Addr, JoinHandle<anyhow::Result<()>>)> {
-        let broker = DefaultBroker::<I>::new().spawn().await?;
-        let broker_a = broker.clone();
-        Ok((
-            broker,
-            tokio::spawn(async move {
-                while let Some(msg) = self.0.next().await {
-                    broker_a
-                        .call::<DefaultBroker<I>, Publish<I>>(Publish(msg))
-                        .await?;
-                }
-                Ok(())
-            }),
-        ))
-    }
-}

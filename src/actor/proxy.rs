@@ -1,13 +1,18 @@
 use std::pin::Pin;
 
-use futures::{lock::Mutex, Future};
+use futures::{channel::oneshot, lock::Mutex, Future};
 
 use anyhow::Result;
 
 use super::{message::Message, runner::ActorID};
 
-pub(crate) type ProxyRetBlock<T> =
-    Pin<Box<dyn Future<Output = Result<<T as Message>::Result>> + Send + 'static>>;
+pub(crate) type ProxyRetBlock<T> = Pin<
+    Box<
+        dyn Future<Output = Result<oneshot::Receiver<Result<<T as Message>::Result>>>>
+            + Send
+            + 'static,
+    >,
+>;
 pub(crate) type ProxyFnBlock<T> = Box<dyn Fn(T) -> ProxyRetBlock<T> + Send + Sync + 'static>;
 
 pub struct Proxy<T: Message> {
@@ -24,7 +29,7 @@ impl<T: Message> Proxy<T> {
     }
 
     pub async fn call(&self, msg: T) -> Result<T::Result> {
-        self.proxy_inner.lock().await(msg).await
+        self.proxy_inner.lock().await(msg).await?.await?
     }
 
     pub async fn call_timeout(
@@ -33,8 +38,8 @@ impl<T: Message> Proxy<T> {
         timeout: std::time::Duration,
     ) -> Result<Option<T::Result>> {
         tokio::select! {
-            res = self.proxy_inner.lock().await(msg) => {
-                res.map( Some )
+            res = self.proxy_inner.lock().await(msg).await? => {
+                res?.map( Some )
             }
             _ = tokio::time::sleep(timeout) => Ok(None)
         }

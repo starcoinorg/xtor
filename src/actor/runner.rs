@@ -17,7 +17,6 @@ use tokio::{sync::RwLock, task::JoinHandle};
 use super::{
     addr::{Addr, Event, WeakAddr},
     context::Context,
-    supervisor::{Supervise, Supervisor},
 };
 
 pub(crate) static ACTOR_ID: AtomicU64 = AtomicU64::new(0);
@@ -44,6 +43,13 @@ pub trait Actor: Send + Sync + 'static {
     async fn get_name(&self, ctx: &Context) -> Option<String> {
         ACTOR_ID_NAME.read().await[&ctx.id].clone()
     }
+    async fn get_name_or_id_string(&self, ctx: &Context) -> String {
+        if let Some(name) = self.get_name(ctx).await {
+            name
+        } else {
+            format!("{}", ctx.id)
+        }
+    }
     /// starting an actor
     /// if you want a supervised actor you need to send message to supervisor instead starting it from here
     /// `?Sized` actor is not supported
@@ -54,14 +60,11 @@ pub trait Actor: Send + Sync + 'static {
         ActorRunner::new().run(self).await
     }
 
-    async fn spawn_supervised<S: Supervisor>(self, supervisor: &Addr) -> Result<Addr>
+    async fn spawn_supervisable(self) -> Result<Addr>
     where
         Self: Sized + ActorRestart,
     {
         let addr = ActorRunner::new().supervised_run(self).await?;
-        supervisor
-            .call::<S, Supervise>(Supervise(addr.clone()))
-            .await?;
         Ok(addr)
     }
 }

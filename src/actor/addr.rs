@@ -4,6 +4,8 @@ use std::sync::Arc;
 use std::sync::Weak;
 use std::time::Duration;
 
+use crate::Supervise;
+
 use super::context::Context;
 use super::message::Handler;
 use super::message::Message;
@@ -42,6 +44,24 @@ pub struct Addr {
 }
 
 impl Addr {
+    pub async fn link_to_supervisor(&self, proxy: &Proxy<Supervise>) -> Result<()> {
+        proxy.call(Supervise(self.clone())).await?;
+        Ok(())
+    }
+    pub async fn chain_link_to_supervisor(self, proxy: &Proxy<Supervise>) -> Result<Self> {
+        proxy.call(Supervise(self.clone())).await?;
+        Ok(self)
+    }
+
+    pub async fn get_name_or_id_string(&self) -> String {
+        let name = self.get_name().await;
+        if let Some(name) = name {
+            name
+        } else {
+            self.id.to_string()
+        }
+    }
+
     pub async fn get_name(&self) -> Option<String> {
         ACTOR_ID_NAME.read().await[&self.id].clone()
     }
@@ -104,7 +124,9 @@ impl Addr {
         }
     }
 
-    /// FIXME: this is wrong! look at call_unblock
+    /// create a proxy (like delegate in C#)
+    /// you only needs to care the lifetime and the type when you trying to create
+    /// when you calling to proxy, the type of actor is not needed.
     pub async fn proxy<A: Handler<T>, T: Message>(&self) -> Proxy<T> {
         let weak_tx = Arc::downgrade(&self.tx);
         let inner: ProxyFnBlock<T> = Box::new(move |msg| {
@@ -115,17 +137,19 @@ impl Addr {
                     .upgrade()
                     .ok_or_else(|| anyhow::anyhow!("error: proxy tx is dropped"))?;
                 mpsc::UnboundedSender::clone(&*ttx).start_send(Event::Exec(Box::new(move |actor, ctx| {
-                        Box::pin(async move {
-                            let handler = match actor.as_ref().downcast_ref::<A>() {
-                                Some(handler) => Ok(handler),
-                                None => Err(anyhow::anyhow!("error: {} trying to handle a message in actor which you didn't implement the handler trait {} for it", std::any::type_name_of_val(&actor), std::any::type_name::<dyn Handler::<T>>())),
-                            }?;
-                            let res = handler.handle(ctx, msg).await?;
-                            let _ = tx.send(res);
-                            Ok(())
-                        })
+                    Box::pin(async move {
+                        match actor.as_ref().downcast_ref::<A>() {
+                            Some(handler) => {
+                                match handler.handle(ctx, msg).await {
+                                    Ok(res) => {let _ = tx.send(Ok(res));Ok(())},
+                                    Err(e) => Err(e),
+                                }
+                            },
+                            None => Err(anyhow::anyhow!("error: {} trying to handle a message in actor which you didn't implement the handler trait {} for it", std::any::type_name_of_val(&actor), std::any::type_name::<dyn Handler::<T>>())),
+                        }
+                    })
                     })))?;
-                Ok(rx.await?)
+                Ok(rx)
             })
         });
 

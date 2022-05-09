@@ -1,13 +1,8 @@
 use anyhow::Result;
 use futures::{future::join, join};
 use once_cell::sync::OnceCell;
-use std::{mem::MaybeUninit, sync::atomic::AtomicUsize};
-use xtor::actor::{
-    addr::{Addr, WeakAddr},
-    context::Context,
-    message::Handler,
-    runner::Actor,
-};
+use std::sync::atomic::AtomicUsize;
+use xtor::actor::{addr::WeakAddr, context::Context, message::Handler, runner::Actor};
 
 #[xtor::message(result = "isize")]
 struct Ping(isize);
@@ -27,11 +22,7 @@ impl Actor for PingActor {}
 #[async_trait::async_trait]
 impl Handler<Ping> for PingActor {
     async fn handle(&self, ctx: &Context, msg: Ping) -> Result<isize> {
-        println!(
-            "{}: {}",
-            self.get_name(ctx).await.unwrap_or_default(),
-            msg.0
-        );
+        println!("{}: {}", self.get_name_or_id_string(ctx).await, msg.0);
         match self.ping_address.get().unwrap().upgrade() {
             Some(addr) => {
                 let n = self.n;
