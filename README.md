@@ -1,4 +1,4 @@
-# Xtor: An actor async actor framework.
+# Xtor: An handler async actor framework.
 [![Rust](https://github.com/starcoinorg/xtor/actions/workflows/rust.yml/badge.svg)](https://github.com/starcoinorg/xtor/actions/workflows/rust.yml)
 
 ## Key features
@@ -53,9 +53,9 @@ async fn main(){
 - `src/actor/*` for pure async actor implementation
 - `src/sync_actor/*` for single threaded sync actor implementation
 - `src/utils/*` for utilities both trait and default implementation such as
-  - `Broker`
+  - `DefaultBroker`
   - `Service`
-  - `Supervisor`
+  - `DefaultSupervisor`
 
 
 ## References
