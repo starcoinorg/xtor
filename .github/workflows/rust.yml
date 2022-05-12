@@ -6,16 +6,23 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  Build_And_Check:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
+    - name: Add Deps
+      run: rustup component add rustfmt clippy
     - name: Build
       run: cargo build --verbose
     - name: Run fmt check
-      run: rustup component add rustfmt && cargo fmt --check
-    - name: Run tests
+      run: cargo fmt -- --check
+    - name: Clippy
+      run: cargo clippy -- -D warnings
+  Run_Tests_And_Examples:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run Tests
       run: cargo test --verbose
-    - name: Run examples
-      run: for eg in `ls examples/* | xargs basename --suffix=.rs`; do cargo run --example ${eg}; done
+    - name: Run Examples
+      run: for eg in `ls examples/* | xargs basename --suffix=.rs`; do cargo run --example ${eg} || exit 1; done

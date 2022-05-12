@@ -1,10 +1,9 @@
 use anyhow::Result;
 use futures::try_join;
-use xtor::actor::{
-    broker::{DefaultBroker, Publish, Subscribe},
-    context::Context,
-    message::Handler,
-    runner::Actor,
+use xtor::{
+    actor::{context::Context, message::Handler, runner::Actor},
+    broker::{Publish, Subscribe},
+    utils::default_broker::DefaultBroker,
 };
 
 struct EvenSubscriptor;

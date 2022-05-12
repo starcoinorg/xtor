@@ -50,11 +50,10 @@ async fn main() -> Result<()> {
 
 ## project structure
 - `src/actor/*` for pure async actor implementation
-- `src/sync_actor/*` for single threaded sync actor implementation
 - `src/utils/*` for utilities both trait and default implementation such as
   - `DefaultBroker`
-  - `Service`
   - `DefaultSupervisor`
+  - `Service`
 
 
 ## References
