@@ -1,6 +1,6 @@
 [package]
 name = "xtor"
-version = "0.1.0"
+version = "0.9.0"
 authors = ["lemonhx <lemonhx@lemonhx.tech>"]
 edition = "2021"
 license = "MIT"
@@ -9,6 +9,7 @@ homepage = "https://github.com/starcoinorg/xtor"
 categories = ["actor", "asynchronous", "network-programming"]
 keywords = ["actor", "futures", "async", "xtor", "tokio"]
 readme = "README.md"
+description = "Async Actor framework for Rust which is blazing fast and rock solid."
 
 [dependencies]
 tokio = {version = "^1", features = ["full"]}
@@ -18,7 +19,7 @@ anyhow = { version = "1" }
 futures = "0.3"
 lazy_static = "1"
 dashmap = "5.2"
-xtor_derive = { version = "0.1", path = "xtor_derive" }
+xtor_derive = "0.9"
 
 # bench marks and tests
 [dev-dependencies]
@@ -27,7 +28,7 @@ actix = "0.13.0"
 async-trait = "0.1.24"
 tokio-test = "0.4.2"
 xactor = { version = "0.7.6", default-features = false, features = ["runtime-tokio"] }
-rand = "*"
+rand = "0.8"
 
 [[bench]]
 name = "async_bench"
