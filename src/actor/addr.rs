@@ -225,6 +225,19 @@ pub struct WeakAddr {
 }
 
 impl WeakAddr {
+    pub async fn get_name_or_id_string(&self) -> String {
+        let name = self.get_name().await;
+        if let Some(name) = name {
+            name
+        } else {
+            self.id.to_string()
+        }
+    }
+
+    pub async fn get_name(&self) -> Option<String> {
+        ACTOR_ID_NAME.get(&self.id)?.clone()
+    }
+
     pub fn upgrade(&self) -> Option<Addr> {
         self._tx.upgrade().map(|tx| Addr {
             id: self.id,

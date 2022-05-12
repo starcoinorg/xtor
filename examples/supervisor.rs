@@ -37,13 +37,7 @@ impl Actor for Human {}
 #[async_trait::async_trait]
 impl ActorRestart for Human {
     async fn on_restart(&self, addr: &WeakAddr) {
-        println!(
-            "\thospital saved {}",
-            addr.upgrade()
-                .expect("fail to upgrade")
-                .get_name_or_id_string()
-                .await
-        );
+        println!("\thospital saved {}", addr.get_name_or_id_string().await);
         self.0.store(false, std::sync::atomic::Ordering::SeqCst);
     }
 }
