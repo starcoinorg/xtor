@@ -1,5 +1,5 @@
 use anyhow::Result;
-use futures::{future::join, join};
+use futures::{join, try_join};
 use once_cell::sync::OnceCell;
 use std::sync::atomic::AtomicUsize;
 use xtor::actor::{addr::WeakAddr, context::Context, message::Handler, runner::Actor};
@@ -23,7 +23,7 @@ impl Actor for PingActor {}
 impl Handler<Ping> for PingActor {
     async fn handle(&self, ctx: &Context, msg: Ping) -> Result<isize> {
         println!("{}: {}", self.get_name_or_id_string(ctx).await, msg.0);
-        match self.ping_address.get().unwrap().upgrade() {
+        match self.ping_address.get().expect("fail to get").upgrade() {
             Some(addr) => {
                 let n = self.n;
                 let _ = tokio::task::spawn(async move {
@@ -44,38 +44,43 @@ impl Handler<Ping> for PingActor {
 #[async_trait::async_trait]
 impl Handler<SetPingAddress> for PingActor {
     async fn handle(&self, _ctx: &Context, msg: SetPingAddress) -> Result<()> {
-        self.ping_address.set(msg.0).unwrap();
+        self.ping_address.set(msg.0).expect("fail to set");
         Ok(())
     }
 }
 
 #[xtor::main]
-async fn main() {
-    let ping = PingActor {
-        sleeper: 100,
-        n: 1,
-        counter: AtomicUsize::new(0),
-        ping_address: OnceCell::new(),
-    };
-    let pong = PingActor {
-        sleeper: 200,
-        n: -1,
-        counter: AtomicUsize::new(0),
-        ping_address: OnceCell::new(),
-    };
-    let (ping_addr, pong_addr) = join(ping.spawn(), pong.spawn()).await;
-    let (ping_addr, pong_addr) = (ping_addr.unwrap(), pong_addr.unwrap());
-    join! {ping_addr.set_name("ping"), pong_addr.set_name("pong")};
-    let _ = join! {
-        ping_addr.call::<PingActor, SetPingAddress>(SetPingAddress(pong_addr.downgrade())),
-        pong_addr.call::<PingActor, SetPingAddress>(SetPingAddress(ping_addr.downgrade()))
-    };
+async fn main() -> anyhow::Result<()> {
+    // create actors
+    let (ping_addr, pong_addr) = try_join!(
+        PingActor {
+            sleeper: 100,
+            n: 1,
+            counter: AtomicUsize::new(0),
+            ping_address: OnceCell::new(),
+        }
+        .spawn(),
+        PingActor {
+            sleeper: 200,
+            n: -1,
+            counter: AtomicUsize::new(0),
+            ping_address: OnceCell::new(),
+        }
+        .spawn(),
+    )?;
 
-    let start = std::time::Instant::now();
-    ping_addr.call::<PingActor, Ping>(Ping(0)).await.unwrap();
-    while start.elapsed().as_secs() < 10 {
-        tokio::time::sleep(std::time::Duration::from_millis(1)).await;
-    }
+    // set their name
+    join!(ping_addr.set_name("ping"), pong_addr.set_name("pong"));
+
+    // set their address to each other
+    try_join!(
+        ping_addr.call::<PingActor, SetPingAddress>(SetPingAddress(pong_addr.downgrade())),
+        pong_addr.call::<PingActor, SetPingAddress>(SetPingAddress(ping_addr.downgrade())),
+    )?;
+
+    ping_addr.call::<PingActor, Ping>(Ping(0)).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(10000)).await;
     ping_addr.stop(Ok(()));
     pong_addr.stop(Ok(()));
+    Ok(())
 }

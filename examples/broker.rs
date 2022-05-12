@@ -1,10 +1,14 @@
 use anyhow::Result;
-use xtor::{
-    actor::{context::Context, message::Handler, runner::Actor},
-    utils::broker::{DefaultBroker, Publish, Subscribe},
+use futures::try_join;
+use xtor::actor::{
+    broker::{DefaultBroker, Publish, Subscribe},
+    context::Context,
+    message::Handler,
+    runner::Actor,
 };
 
 struct EvenSubscriptor;
+
 #[async_trait::async_trait]
 impl Actor for EvenSubscriptor {
     async fn on_stop(&self, _ctx: &Context) {
@@ -58,41 +62,41 @@ impl Handler<Number> for BigNumberSubscriptor {
 struct Number(u64);
 
 #[xtor::main]
-async fn main() {
-    let even = EvenSubscriptor.spawn().await.unwrap();
-    let odd = OddSubscriptor.spawn().await.unwrap();
-    let big = BigNumberSubscriptor.spawn().await.unwrap();
+async fn main() -> anyhow::Result<()> {
+    // create actor
+    let (even, odd, big) = try_join!(
+        EvenSubscriptor.spawn(),
+        OddSubscriptor.spawn(),
+        BigNumberSubscriptor.spawn(),
+    )?;
 
-    let broker = DefaultBroker::<Number>::new().spawn().await.unwrap();
-    broker
-        .call::<DefaultBroker<Number>, Subscribe<Number>>(
-            Subscribe::from_addr::<EvenSubscriptor>(even.clone()).await,
-        )
-        .await
-        .unwrap();
-    broker
-        .call::<DefaultBroker<Number>, Subscribe<Number>>(
-            Subscribe::from_addr::<OddSubscriptor>(odd.clone()).await,
-        )
-        .await
-        .unwrap();
-    broker
-        .call::<DefaultBroker<Number>, Subscribe<Number>>(
-            Subscribe::from_addr::<BigNumberSubscriptor>(big.clone()).await,
-        )
-        .await
-        .unwrap();
+    // create broker and proxy
+    let broker = DefaultBroker::<Number>::new().spawn().await?;
+    let subscribe_proxy = broker
+        .proxy::<DefaultBroker<Number>, Subscribe<Number>>()
+        .await;
+
+    // subscribe to broker
+    try_join!(
+        subscribe_proxy.call(Subscribe::from_addr::<EvenSubscriptor>(even.clone()).await),
+        subscribe_proxy.call(Subscribe::from_addr::<OddSubscriptor>(odd.clone()).await),
+        subscribe_proxy.call(Subscribe::from_addr::<BigNumberSubscriptor>(big.clone()).await),
+    )?;
 
     let broker_clone = broker.clone();
     let h = tokio::task::spawn(async move {
+        let broker_publish_proxy = broker_clone
+            .proxy::<DefaultBroker<Number>, Publish<Number>>()
+            .await;
         for i in 0..10 {
             println!("\nPublish: {}", i);
-            broker_clone
-                .call::<DefaultBroker<Number>, Publish<Number>>(Publish(Number(i)))
+            broker_publish_proxy
+                .call(Publish(Number(i)))
                 .await
-                .unwrap();
+                .expect("publish failed");
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         }
     });
-    h.await.unwrap();
+
+    h.await.map_err(|e| e.into())
 }

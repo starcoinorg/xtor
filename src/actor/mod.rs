@@ -1,4 +1,5 @@
 pub mod addr;
+pub mod broker;
 pub mod context;
 pub mod message;
 pub mod proxy;

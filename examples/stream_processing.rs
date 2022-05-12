@@ -1,10 +1,14 @@
 use std::sync::atomic::AtomicUsize;
 
-use futures::{Stream, StreamExt};
+use futures::{try_join, Stream, StreamExt};
 use tokio::task::JoinHandle;
 use xtor::{
-    actor::{context::Context, message::Handler, runner::Actor},
-    utils::broker::{DefaultBroker, Publish, Subscribe},
+    actor::{
+        broker::{DefaultBroker, Publish, Subscribe},
+        context::Context,
+        message::Handler,
+        runner::Actor,
+    },
     Addr, Message,
 };
 
@@ -36,7 +40,6 @@ impl Stream for RangeStream {
 
 pub struct StreamBroker<S: Stream<Item = I> + Sync + Send + 'static, I: Message + Clone>(pub S);
 impl<S: Stream<Item = I> + Sync + Send + 'static, I: Message + Clone> Actor for StreamBroker<S, I> {}
-
 impl<S: Stream<Item = I> + Sync + Send + 'static + Unpin, I: Message + Sync + Clone>
     StreamBroker<S, I>
 {
@@ -93,29 +96,22 @@ impl Handler<Number> for BigNumberSubscriptor {
 }
 
 #[xtor::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     let stream = RangeStream {
         current: AtomicUsize::new(0),
         end: 10,
     };
 
-    let even = EvenSubscriptor.spawn().await.unwrap();
-    let big = BigNumberSubscriptor.spawn().await.unwrap();
+    let (even, big) = try_join!(EvenSubscriptor.spawn(), BigNumberSubscriptor.spawn())?;
 
-    let (broker, h) = StreamBroker(stream).spawn().await.unwrap();
-
-    broker
-        .call::<DefaultBroker<Number>, Subscribe<Number>>(
+    let (broker, h) = StreamBroker(stream).spawn().await?;
+    try_join!(
+        broker.call::<DefaultBroker<Number>, Subscribe<Number>>(
             Subscribe::from_addr::<EvenSubscriptor>(even.clone()).await,
-        )
-        .await
-        .unwrap();
-
-    broker
-        .call::<DefaultBroker<Number>, Subscribe<Number>>(
+        ),
+        broker.call::<DefaultBroker<Number>, Subscribe<Number>>(
             Subscribe::from_addr::<BigNumberSubscriptor>(big.clone()).await,
         )
-        .await
-        .unwrap();
-    h.await.unwrap().unwrap();
+    )?;
+    h.await?.map_err(|e| e.into())
 }

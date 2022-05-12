@@ -39,7 +39,10 @@ impl ActorRestart for Human {
     async fn on_restart(&self, addr: &WeakAddr) {
         println!(
             "\thospital saved {}",
-            addr.upgrade().unwrap().get_name_or_id_string().await
+            addr.upgrade()
+                .expect("fail to upgrade")
+                .get_name_or_id_string()
+                .await
         );
         self.0.store(false, std::sync::atomic::Ordering::SeqCst);
     }
@@ -97,15 +100,13 @@ async fn main() -> anyhow::Result<()> {
         xtor::utils::default_supervisor::DefaultSupervisorRestartStrategy::OneForOne,
     )
     .spawn()
-    .await
-    .unwrap();
+    .await?;
 
     let virus_hospital = DefaultSupervisor::new(
         xtor::utils::default_supervisor::DefaultSupervisorRestartStrategy::OneForAll,
     )
     .spawn()
-    .await
-    .unwrap();
+    .await?;
 
     let normal_hospital_proxy = normal_hospital
         .proxy::<DefaultSupervisor, Supervise>()
@@ -159,8 +160,13 @@ async fn main() -> anyhow::Result<()> {
         while start.elapsed().as_secs() < system_running_duration {
             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
             let mut rng = StdRng::from_entropy();
-            let selected_human = humans.get(rng.gen_range(0..humans.len())).unwrap();
-            let selected_food = foods.get(rng.gen_range(0..foods.len())).unwrap().clone();
+            let selected_human = humans
+                .get(rng.gen_range(0..humans.len()))
+                .expect("fail to get human");
+            let selected_food = foods
+                .get(rng.gen_range(0..foods.len()))
+                .expect("fail to get food")
+                .clone();
             let _ = selected_human.call::<Human, Eat>(Eat(selected_food)).await;
         }
     });
@@ -171,12 +177,14 @@ async fn main() -> anyhow::Result<()> {
         while start.elapsed().as_secs() < system_running_duration {
             tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
             let mut rng = StdRng::from_entropy();
-            let selected_human = humans.get(rng.gen_range(0..humans.len())).unwrap();
+            let selected_human = humans
+                .get(rng.gen_range(0..humans.len()))
+                .expect("fail to get human");
             let _ = selected_human.call::<Human, Virus>(Virus).await;
         }
     });
 
-    food_feeder.await.unwrap();
-    virus_inflecter.await.unwrap();
+    food_feeder.await?;
+    virus_inflecter.await?;
     Ok(())
 }

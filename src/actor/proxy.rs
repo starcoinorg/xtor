@@ -1,6 +1,6 @@
 use std::pin::Pin;
 
-use futures::{channel::oneshot, lock::Mutex, Future};
+use futures::{channel::oneshot, Future};
 
 use anyhow::Result;
 
@@ -17,19 +17,16 @@ pub(crate) type ProxyFnBlock<T> = Box<dyn Fn(T) -> ProxyRetBlock<T> + Send + Syn
 
 pub struct Proxy<T: Message> {
     pub id: ActorID,
-    pub proxy_inner: Mutex<ProxyFnBlock<T>>,
+    pub proxy_inner: ProxyFnBlock<T>,
 }
 
 impl<T: Message> Proxy<T> {
     pub fn new(id: ActorID, proxy_inner: ProxyFnBlock<T>) -> Self {
-        Self {
-            id,
-            proxy_inner: Mutex::new(proxy_inner),
-        }
+        Self { id, proxy_inner }
     }
 
     pub async fn call(&self, msg: T) -> Result<T::Result> {
-        self.proxy_inner.lock().await(msg).await?.await?
+        (self.proxy_inner)(msg).await?.await?
     }
 
     pub async fn call_timeout(
@@ -38,7 +35,7 @@ impl<T: Message> Proxy<T> {
         timeout: std::time::Duration,
     ) -> Result<Option<T::Result>> {
         tokio::select! {
-            res = self.proxy_inner.lock().await(msg).await? => {
+            res =( self.proxy_inner)(msg).await? => {
                 res?.map( Some )
             }
             _ = tokio::time::sleep(timeout) => Ok(None)
@@ -46,6 +43,6 @@ impl<T: Message> Proxy<T> {
     }
 
     pub async fn call_unblock(&self, msg: T) -> ProxyRetBlock<T> {
-        self.proxy_inner.lock().await(msg)
+        (self.proxy_inner)(msg)
     }
 }

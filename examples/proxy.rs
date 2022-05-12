@@ -19,7 +19,7 @@ struct CounterActor {
 #[async_trait::async_trait]
 impl Actor for CounterActor {
     async fn on_stop(&self, ctx: &Context) {
-        println!("{} stop", self.get_name(ctx).await.unwrap());
+        println!("{} stop", self.get_name_or_id_string(ctx).await);
     }
 }
 
@@ -41,28 +41,30 @@ impl Handler<Print> for CounterActor {
 }
 
 #[xtor::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     let counter = CounterActor {
         counter: AtomicUsize::new(0),
     };
-    let addr = ActorRunner::new().run(counter).await.unwrap();
+    let addr = ActorRunner::new().run(counter).await?;
     addr.set_name("Counter Actor").await;
     let proxy = addr.proxy::<CounterActor, AddOne>().await;
     tokio::task::spawn(async move {
         loop {
-            proxy.call(AddOne).await.unwrap();
+            proxy.call(AddOne).await.expect("fail to call");
             tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
         }
     });
     let a = addr.clone();
     tokio::task::spawn(async move {
         loop {
-            a.call::<CounterActor, Print>(Print).await.unwrap();
+            a.call::<CounterActor, Print>(Print)
+                .await
+                .expect("fail to call");
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         }
     });
 
-    let mut buffer = String::new();
-    std::io::stdin().read_line(&mut buffer).unwrap();
+    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
     addr.stop(Ok(()));
+    Ok(())
 }

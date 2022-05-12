@@ -20,8 +20,8 @@ impl Handler<GetOracleNumber> for Oracle {
 }
 
 #[xtor::main]
-async fn main() {
-    let oracle1 = Oracle.spawn().await.unwrap();
+async fn main() -> anyhow::Result<()> {
+    let oracle1 = Oracle.spawn().await?;
     let start = std::time::Instant::now();
     while start.elapsed().as_secs() < 10 {
         let oracle1_number = oracle1
@@ -29,8 +29,7 @@ async fn main() {
                 GetOracleNumber,
                 std::time::Duration::from_millis(500),
             )
-            .await
-            .unwrap();
+            .await?;
         match oracle1_number {
             Some(o1) => {
                 println!("oracle1: {}", o1);
@@ -40,4 +39,5 @@ async fn main() {
             }
         }
     }
+    Ok(())
 }

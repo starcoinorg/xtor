@@ -16,35 +16,34 @@ cargo add xtor
 
 write some code
 ```rs
-use async_trait::async_trait;
-use xtor::actor::{actor::Actor, message::Handler, context::Context};
 use anyhow::Result;
+use async_trait::async_trait;
+use xtor::actor::{context::Context, message::Handler, runner::Actor};
 
 // first define actor
-struct Xxx;
-impl Actor for Xxx {}
-
+struct HelloAector;
+impl Actor for HelloAector {}
 
 // then define message
-#[xtor::message(result = "i32")]
+#[xtor::message(result = "()")]
 #[derive(Debug)]
-struct Yyy;
+struct Hello;
 
 // then impl the handler
 #[async_trait]
-impl Handler<Yyy> for Xxx {
-    async fn handle(&self, _ctx: &Context, msg: Yyy) -> Result<i32> {
-        println!("{:?} received",&msg);
-        Ok(0)
+impl Handler<Hello> for HelloAector {
+    async fn handle(&self, _ctx: &Context, msg: Hello) -> Result<()> {
+        println!("{:?} received", &msg);
+        Ok(())
     }
 }
 
 // main will finish when all actors died out.
 #[xtor::main]
-async fn main(){
-    let x = Xxx;
-    let x_address = x.spawn().await.unwrap();
-    x_address.call::<Xxx, Yyy>(Yyy).await.unwrap();
+async fn main() -> Result<()> {
+    let hello_actor = HelloAector;
+    let hello_actor_address = hello_actor.spawn().await?;
+    hello_actor_address.call::<HelloAector, Hello>(Hello).await
 }
 ```
 

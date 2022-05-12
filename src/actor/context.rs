@@ -3,9 +3,9 @@ use std::sync::{Arc, Weak};
 use futures::{
     channel::{mpsc, oneshot},
     future::{join_all, Shared},
+    lock::Mutex,
 };
 use once_cell::sync::OnceCell;
-use tokio::sync::RwLock;
 
 use super::{
     addr::{Event, WeakAddr},
@@ -18,7 +18,7 @@ pub struct Context {
     pub id: ActorID,
     tx: Weak<mpsc::UnboundedSender<Event>>,
     pub(crate) rx_exit: Shared<oneshot::Receiver<()>>,
-    pub(crate) supervisors: RwLock<Vec<Proxy<Restart>>>,
+    pub(crate) supervisors: Mutex<Vec<Proxy<Restart>>>,
     pub(crate) addr: OnceCell<WeakAddr>,
 }
 
@@ -43,7 +43,7 @@ impl Context {
                 id,
                 tx: weak_tx,
                 rx_exit,
-                supervisors: RwLock::new(vec![]),
+                supervisors: Mutex::new(vec![]),
                 addr: OnceCell::new(),
             },
             rx,
@@ -53,7 +53,8 @@ impl Context {
 
     pub fn stop(&self) {
         if let Some(tx) = self.tx.upgrade() {
-            tx.unbounded_send(Event::Stop(Ok(()))).unwrap();
+            tx.unbounded_send(Event::Stop(Ok(())))
+                .expect("failed to send stop event");
         }
     }
 
@@ -62,14 +63,14 @@ impl Context {
         // first result error: dead
         // second result error: alive but failed to execute restart
         // any second result error: fail
-        let supervisors = self.supervisors.read().await;
+        let supervisors = self.supervisors.lock().await;
         if supervisors.len() > 0 {
             let jobs = supervisors.iter().map(|p| p.call(Restart(self.id)));
             let mut restarts = join_all(jobs)
                 .await
                 .into_iter()
                 .filter(|r| r.is_ok())
-                .map(|r| r.unwrap());
+                .map(|r| r.expect("failed to restart"));
             if restarts.any(|r| r.is_err()) {
                 Err(anyhow::anyhow!(
                     "one or more supervisor failed to restart {:?}",

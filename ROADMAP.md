@@ -11,9 +11,6 @@
   - [x] broker
   - [x] service
   - [x] proxy
-- [ ] sync actor
-  - [ ] sync context
-  - [ ] sync runtime
 - [ ] stream processing
   - [x] by broker
 
@@ -25,4 +22,6 @@
 - [ ] raw IO
   - [ ] tokio -> xtor
   - [ ] tokio_uring -> xtor
-
+- [ ] sync actor
+  - [ ] sync context
+  - [ ] sync runtime

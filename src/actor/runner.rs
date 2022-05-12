@@ -1,9 +1,7 @@
-use std::{
-    collections::HashMap,
-    sync::{atomic::AtomicU64, Arc},
-};
+use std::sync::{atomic::AtomicU64, Arc};
 
 use anyhow::Result;
+use dashmap::DashMap;
 use futures::{
     channel::{
         mpsc::{self, UnboundedSender},
@@ -12,7 +10,7 @@ use futures::{
     FutureExt, StreamExt,
 };
 use lazy_static::lazy_static;
-use tokio::{sync::RwLock, task::JoinHandle};
+use tokio::task::JoinHandle;
 
 use super::{
     addr::{Addr, Event, WeakAddr},
@@ -23,10 +21,8 @@ pub(crate) static ACTOR_ID: AtomicU64 = AtomicU64::new(0);
 pub(crate) static RUNNING_ACTOR_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 lazy_static! {
-    pub static ref ACTOR_ID_NAME: RwLock<HashMap<u64, Option<String>>> =
-        RwLock::new(HashMap::new());
-    pub static ref ACTOR_ID_HANDLE: RwLock<HashMap<u64, JoinHandle<Result<()>>>> =
-        RwLock::new(HashMap::new());
+    pub static ref ACTOR_ID_NAME: DashMap<u64, Option<String>> = DashMap::new();
+    pub static ref ACTOR_ID_HANDLE: DashMap<u64, JoinHandle<Result<()>>> = DashMap::new();
 }
 
 pub type ActorID = u64;
@@ -41,7 +37,7 @@ pub trait Actor: Send + Sync + 'static {
     async fn on_stop(&self, _ctx: &Context) {}
     /// check the name of the actor
     async fn get_name(&self, ctx: &Context) -> Option<String> {
-        ACTOR_ID_NAME.read().await[&ctx.id].clone()
+        ACTOR_ID_NAME.get(&ctx.id)?.clone()
     }
     async fn get_name_or_id_string(&self, ctx: &Context) -> String {
         if let Some(name) = self.get_name(ctx).await {
@@ -104,10 +100,10 @@ impl ActorRunner {
 
         let rx_exit = ctx.rx_exit.clone();
         let id = ctx.id;
-        ACTOR_ID_NAME.write().await.insert(id, None);
+        ACTOR_ID_NAME.insert(id, None);
         let actor = Arc::new(actor);
         let addr = Addr { id, tx, rx_exit };
-        ctx.addr.set(addr.downgrade()).unwrap();
+        ctx.addr.set(addr.downgrade()).expect("addr is already set");
         actor.on_start(&ctx).await?;
         let handle = tokio::task::spawn(async move {
             let mut exit_err = Ok(());
@@ -133,10 +129,11 @@ impl ActorRunner {
                 }
             }
             actor.on_stop(&ctx).await;
-            tx_exit.send(()).unwrap();
+            tx_exit.send(()).expect("tx_exit is already closed");
+            ACTOR_ID_HANDLE.remove(&id);
             exit_err
         });
-        ACTOR_ID_HANDLE.write().await.insert(id, handle);
+        ACTOR_ID_HANDLE.insert(id, handle);
         Ok(addr)
     }
 
@@ -150,10 +147,10 @@ impl ActorRunner {
 
         let rx_exit = ctx.rx_exit.clone();
         let id = ctx.id;
-        ACTOR_ID_NAME.write().await.insert(id, None);
+        ACTOR_ID_NAME.insert(id, None);
         let actor = Arc::new(actor);
         let addr = Addr { id, tx, rx_exit };
-        ctx.addr.set(addr.downgrade()).unwrap();
+        ctx.addr.set(addr.downgrade()).expect("addr is already set");
         actor.on_start(&ctx).await?;
         let weakaddr = addr.downgrade();
         let handle = tokio::task::spawn(async move {
@@ -177,7 +174,7 @@ impl ActorRunner {
                             continue 'supervising_loop;
                         }
                         Event::AddSupervisor(proxy) => {
-                            ctx.supervisors.write().await.push(proxy);
+                            ctx.supervisors.lock().await.push(proxy);
                         }
                     }
                 }
@@ -195,10 +192,11 @@ impl ActorRunner {
                 }
             }
             actor.on_stop(&ctx).await;
-            tx_exit.send(()).unwrap();
+            tx_exit.send(()).expect("tx_exit is already closed");
+            ACTOR_ID_HANDLE.remove(&id);
             exit_err
         });
-        ACTOR_ID_HANDLE.write().await.insert(id, handle);
+        ACTOR_ID_HANDLE.insert(id, handle);
         Ok(addr)
     }
 }

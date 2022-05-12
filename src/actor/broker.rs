@@ -33,7 +33,7 @@ impl<T: Message + Sync + Clone> Message for Publish<T> {
 pub type SubscriptionID = u64;
 
 pub struct Subscribe<T: Message + Sync + Clone> {
-    addr: WeakAddr,
+    pub addr: WeakAddr,
     proxy: Proxy<T>,
 }
 impl<T: Message + Sync + Clone> Subscribe<T> {

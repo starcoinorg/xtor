@@ -73,9 +73,9 @@ impl Handler<Supervise> for DefaultSupervisor {
             .add_supervisor(
                 ctx.addr
                     .get()
-                    .unwrap()
+                    .expect("supervisor should be in the context")
                     .upgrade()
-                    .unwrap()
+                    .expect("supervisor should be in the context")
                     .proxy::<DefaultSupervisor, Restart>()
                     .await,
             )

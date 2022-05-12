@@ -14,11 +14,12 @@ use super::proxy::ProxyFnBlock;
 use super::runner::ActorID;
 use super::runner::ACTOR_ID_NAME;
 use super::supervisor::Restart;
+use super::ACTOR_ID_HANDLE;
 use anyhow::Result;
 use futures::channel::mpsc;
 use futures::channel::oneshot;
 use futures::future::Shared;
-use futures::lock::Mutex;
+
 use futures::Future;
 
 pub type ExecFuture<'a> = Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>;
@@ -63,7 +64,7 @@ impl Addr {
     }
 
     pub async fn get_name(&self) -> Option<String> {
-        ACTOR_ID_NAME.read().await[&self.id].clone()
+        ACTOR_ID_NAME.get(&self.id)?.clone()
     }
 
     pub async fn add_supervisor(&self, supervisor: Proxy<Restart>) {
@@ -79,13 +80,16 @@ impl Addr {
     pub fn exec(self, f: ExecFn) {
         mpsc::UnboundedSender::clone(&*self.tx)
             .start_send(Event::Exec(f))
-            .unwrap();
+            .expect("send exec event failed");
     }
 
+    /// force to block the unblocked call
     pub async fn call<A: Handler<T>, T: Message>(&self, msg: T) -> anyhow::Result<T::Result> {
         self.call_unblock::<A, T>(msg).await.await?
     }
 
+    /// unblocking call
+    /// you can await on the receiver to get the result when you need
     pub async fn call_unblock<A: Handler<T>, T: Message>(
         &self,
         msg: T,
@@ -155,7 +159,7 @@ impl Addr {
 
         Proxy {
             id: self.id,
-            proxy_inner: Mutex::new(inner),
+            proxy_inner: inner,
         }
     }
 
@@ -173,16 +177,26 @@ impl Addr {
     pub async fn await_stop(&self) -> Result<()> {
         self.rx_exit.clone().await.map_err(|err| err.into())
     }
+    /// # Safety
+    ///
+    /// may lead to deadlock and memory leak
+    /// None means it is already stopped
+    /// Some(()) means it is stopped by this function call
+    pub async unsafe fn force_stop(self) -> Option<()> {
+        let id = self.id;
+        ACTOR_ID_HANDLE.get(&id)?.abort();
+        ACTOR_ID_HANDLE.remove(&id);
+        Some(())
+    }
 
     /// set the name of the actor
     /// better for debug
     pub async fn set_name<T: Into<String>>(&self, name: T) {
-        ACTOR_ID_NAME
-            .write()
-            .await
-            .insert(self.id, Some(name.into()));
+        ACTOR_ID_NAME.insert(self.id, Some(name.into()));
     }
 
+    /// downgrade to weak address
+    /// for avoid cyclic reference for Arc
     pub fn downgrade(&self) -> WeakAddr {
         WeakAddr {
             id: self.id,
