@@ -18,7 +18,6 @@ use super::{
 };
 
 pub(crate) static ACTOR_ID: AtomicU64 = AtomicU64::new(0);
-pub(crate) static RUNNING_ACTOR_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 lazy_static! {
     pub static ref ACTOR_ID_NAME: DashMap<u64, Option<String>> = DashMap::new();
@@ -201,6 +200,8 @@ impl ActorRunner {
     }
 }
 
+/// the default behavior of restarting an actor
+/// WARNING: default is do nothing
 #[async_trait::async_trait]
 pub trait ActorRestart {
     async fn on_restart(&self, _addr: &WeakAddr) {}

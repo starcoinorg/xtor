@@ -10,10 +10,11 @@ use once_cell::sync::OnceCell;
 use super::{
     addr::{Event, WeakAddr},
     proxy::Proxy,
-    runner::{ActorID, ACTOR_ID, RUNNING_ACTOR_COUNTER},
+    runner::{ActorID, ACTOR_ID},
     supervisor::Restart,
 };
 
+/// the context of an actor
 pub struct Context {
     pub id: ActorID,
     tx: Weak<mpsc::UnboundedSender<Event>>,
@@ -37,7 +38,6 @@ impl Context {
         let (tx, rx) = mpsc::unbounded();
         let tx = Arc::new(tx);
         let weak_tx = Arc::downgrade(&tx);
-        RUNNING_ACTOR_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         (
             Self {
                 id,
@@ -51,6 +51,7 @@ impl Context {
         )
     }
 
+    /// to stop an actor
     pub fn stop(&self) {
         if let Some(tx) = self.tx.upgrade() {
             tx.unbounded_send(Event::Stop(Ok(())))
@@ -58,6 +59,7 @@ impl Context {
         }
     }
 
+    /// await supervisor to restart an actor
     pub async fn await_supervisor(&self) -> anyhow::Result<()> {
         // check if at least one supervisor is alive
         // first result error: dead
@@ -82,11 +84,5 @@ impl Context {
         } else {
             Err(anyhow::anyhow!("no supervisor was found"))
         }
-    }
-}
-
-impl Drop for Context {
-    fn drop(&mut self) {
-        RUNNING_ACTOR_COUNTER.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
     }
 }

@@ -22,14 +22,15 @@ use futures::future::Shared;
 
 use futures::Future;
 
-pub type ExecFuture<'a> = Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>;
-pub type ExecFn =
+pub(crate) type ExecFuture<'a> = Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>;
+pub(crate) type ExecFn =
     Box<dyn FnOnce(Arc<dyn std::any::Any + Send + Sync>, &Context) -> ExecFuture + Send + 'static>;
 
 /// default wait interval to 10ms
 /// you can set to a custom value
 pub static mut ACTOR_STOP_WAIT_INTERVAL: Duration = std::time::Duration::from_millis(10);
 
+// Event type
 pub enum Event {
     Stop(Result<()>),
     Exec(ExecFn),
@@ -37,6 +38,9 @@ pub enum Event {
     AddSupervisor(Proxy<Restart>),
 }
 
+/// the address of an actor
+/// remember to use WeakAddr to avoid memory leak
+/// clone as you want
 #[derive(Clone)]
 pub struct Addr {
     pub id: ActorID,
@@ -45,15 +49,19 @@ pub struct Addr {
 }
 
 impl Addr {
+    /// link self to supervisor
     pub async fn link_to_supervisor(&self, proxy: &Proxy<Supervise>) -> Result<()> {
         proxy.call(Supervise(self.clone())).await?;
         Ok(())
     }
+
+    /// link self to supervisor chained version
     pub async fn chain_link_to_supervisor(self, proxy: &Proxy<Supervise>) -> Result<Self> {
         proxy.call(Supervise(self.clone())).await?;
         Ok(self)
     }
 
+    /// get the name or id of the actor
     pub async fn get_name_or_id_string(&self) -> String {
         let name = self.get_name().await;
         if let Some(name) = name {
@@ -63,10 +71,13 @@ impl Addr {
         }
     }
 
+    /// get the name of the actor
     pub async fn get_name(&self) -> Option<String> {
         ACTOR_ID_NAME.get(&self.id)?.clone()
     }
 
+    /// explicitly add a supervisor
+    /// this is useful when you want to create a custom supervisor
     pub async fn add_supervisor(&self, supervisor: Proxy<Restart>) {
         let _ =
             mpsc::UnboundedSender::clone(&*self.tx).start_send(Event::AddSupervisor(supervisor));
@@ -218,6 +229,8 @@ impl Hash for Addr {
     }
 }
 
+/// weak version of Addr
+/// for avoid cyclic reference for Arc
 pub struct WeakAddr {
     pub id: ActorID,
     pub(crate) _tx: Weak<mpsc::UnboundedSender<Event>>,

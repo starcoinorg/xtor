@@ -15,6 +15,8 @@ pub(crate) type ProxyRetBlock<T> = Pin<
 >;
 pub(crate) type ProxyFnBlock<T> = Box<dyn Fn(T) -> ProxyRetBlock<T> + Send + Sync + 'static>;
 
+/// proxy for actor's message handler
+/// like C#'s delegate
 pub struct Proxy<T: Message> {
     pub id: ActorID,
     pub proxy_inner: ProxyFnBlock<T>,

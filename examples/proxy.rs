@@ -42,22 +42,28 @@ impl Handler<Print> for CounterActor {
 
 #[xtor::main]
 async fn main() -> anyhow::Result<()> {
-    let counter = CounterActor {
+    // create actor
+    let addr = CounterActor {
         counter: AtomicUsize::new(0),
-    };
-    let addr = ActorRunner::new().run(counter).await?;
+    }
+    .spawn()
+    .await?;
     addr.set_name("Counter Actor").await;
+
+    // create proxy
     let proxy = addr.proxy::<CounterActor, AddOne>().await;
     tokio::task::spawn(async move {
-        loop {
+        let start = std::time::Instant::now();
+        while start.elapsed().as_secs() < 10 {
             proxy.call(AddOne).await.expect("fail to call");
             tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
         }
     });
-    let a = addr.clone();
+
     tokio::task::spawn(async move {
-        loop {
-            a.call::<CounterActor, Print>(Print)
+        let start = std::time::Instant::now();
+        while start.elapsed().as_secs() < 10 {
+            addr.call::<CounterActor, Print>(Print)
                 .await
                 .expect("fail to call");
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -65,6 +71,5 @@ async fn main() -> anyhow::Result<()> {
     });
 
     tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-    addr.stop(Ok(()));
     Ok(())
 }

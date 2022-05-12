@@ -59,6 +59,7 @@ impl Actor for BigNumberSubscriptor {
         println!("BigNumberSubscriptor stopped");
     }
 }
+
 #[async_trait::async_trait]
 impl Handler<Number> for BigNumberSubscriptor {
     async fn handle(&self, _ctx: &Context, msg: Number) -> anyhow::Result<()> {
@@ -76,9 +77,13 @@ async fn main() -> anyhow::Result<()> {
         end: 10,
     };
 
+    // create actor
     let (even, big) = try_join!(EvenSubscriptor.spawn(), BigNumberSubscriptor.spawn())?;
 
+    // create stream broker
     let (broker, h) = StreamBroker(stream).spawn().await?;
+
+    // subscribe to broker
     try_join!(
         broker.call::<DefaultBroker<Number>, Subscribe<Number>>(
             Subscribe::from_addr::<EvenSubscriptor>(even.clone()).await,
@@ -87,5 +92,6 @@ async fn main() -> anyhow::Result<()> {
             Subscribe::from_addr::<BigNumberSubscriptor>(big.clone()).await,
         )
     )?;
+
     h.await?.map_err(|e| e.into())
 }

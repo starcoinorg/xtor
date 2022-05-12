@@ -12,12 +12,14 @@ use crate::actor::{
     proxy::Proxy,
 };
 
+/// the trait of broker
 #[async_trait::async_trait]
 pub trait Broker<T: Message + Sync + Clone>:
     Handler<Publish<T>> + Handler<Subscribe<T>> + Handler<Unsubscribe>
 {
 }
 
+/// for publishing message to subscribers
 pub struct Publish<T: Message + Sync + Clone + Clone>(pub T);
 
 impl<T: Message + Sync + Clone> Message for Publish<T> {
@@ -26,10 +28,12 @@ impl<T: Message + Sync + Clone> Message for Publish<T> {
 
 pub type SubscriptionID = u64;
 
+/// subscribe to a broker
 pub struct Subscribe<T: Message + Sync + Clone> {
     pub addr: WeakAddr,
     pub proxy: Proxy<T>,
 }
+
 impl<T: Message + Sync + Clone> Subscribe<T> {
     pub async fn from_addr<A: Handler<T>>(addr: Addr) -> Self {
         Self {
@@ -43,6 +47,7 @@ impl<T: Message + Sync + Clone> Message for Subscribe<T> {
     type Result = SubscriptionID;
 }
 
+/// unsubscribe from a broker
 pub struct Unsubscribe(pub SubscriptionID);
 impl Message for Unsubscribe {
     type Result = ();

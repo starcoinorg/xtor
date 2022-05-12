@@ -13,6 +13,7 @@
 
 use std::sync::atomic::AtomicBool;
 
+use futures::{join, try_join};
 use rand::{prelude::StdRng, Rng, SeedableRng};
 use xtor::{
     actor::{
@@ -90,23 +91,26 @@ impl Handler<Virus> for Human {
 #[xtor::main]
 async fn main() -> anyhow::Result<()> {
     let system_running_duration = 10;
-    let normal_hospital = DefaultSupervisor::new(
-        xtor::utils::default_supervisor::DefaultSupervisorRestartStrategy::OneForOne,
-    )
-    .spawn()
-    .await?;
 
-    let virus_hospital = DefaultSupervisor::new(
-        xtor::utils::default_supervisor::DefaultSupervisorRestartStrategy::OneForAll,
-    )
-    .spawn()
-    .await?;
+    // create supervisor actor
+    let (normal_hospital, virus_hospital) = try_join!(
+        DefaultSupervisor::new(
+            xtor::utils::default_supervisor::DefaultSupervisorRestartStrategy::OneForOne,
+        )
+        .spawn(),
+        DefaultSupervisor::new(
+            xtor::utils::default_supervisor::DefaultSupervisorRestartStrategy::OneForAll,
+        )
+        .spawn()
+    )?;
 
-    let normal_hospital_proxy = normal_hospital
-        .proxy::<DefaultSupervisor, Supervise>()
-        .await;
-    let virus_hospital_proxy = virus_hospital.proxy::<DefaultSupervisor, Supervise>().await;
+    // create proxy to supervisor actor
+    let (normal_hospital_proxy, virus_hospital_proxy) = join!(
+        normal_hospital.proxy::<DefaultSupervisor, Supervise>(),
+        virus_hospital.proxy::<DefaultSupervisor, Supervise>()
+    );
 
+    // link actors to supervisor
     let alice = Human::default()
         .spawn_supervisable()
         .await?

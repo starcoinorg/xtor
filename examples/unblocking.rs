@@ -30,6 +30,7 @@ async fn main() -> anyhow::Result<()> {
             oracle2.call_unblock::<Oracle, GetOracleNumber>(GetOracleNumber),
             oracle3.call_unblock::<Oracle, GetOracleNumber>(GetOracleNumber)
         );
+        // use tokio select to unblock with timeout interval
         tokio::select! {
             o1 = oracle1_number => {
                 println!("oracle1: {}", o1??);

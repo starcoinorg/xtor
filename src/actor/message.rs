@@ -3,10 +3,13 @@ use std::sync::Arc;
 use super::{context::Context, runner::Actor};
 use anyhow::Result;
 
+/// message trait
+/// like args in function call
 pub trait Message: 'static + Send {
     type Result: 'static + Send;
 }
 
+/// handle message for actor
 #[async_trait::async_trait]
 pub trait Handler<T: Message>: Actor {
     async fn handle(&self, ctx: &Context, msg: T) -> Result<T::Result>;
