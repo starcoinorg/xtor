@@ -1,10 +1,6 @@
 name: Rust
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: [push, pull_request]
 
 env:
   CARGO_TERM_COLOR: always
@@ -12,12 +8,13 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
     - uses: actions/checkout@v3
     - name: Build
       run: cargo build --verbose
     - name: Run fmt check
-      run: cargo fmt --check
+      run: rustup component add rustfmt && cargo fmt --check
     - name: Run tests
       run: cargo test --verbose
     - name: Run examples
