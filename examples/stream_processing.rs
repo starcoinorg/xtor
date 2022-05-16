@@ -93,5 +93,5 @@ async fn main() -> anyhow::Result<()> {
         )
     )?;
 
-    h.await?.map_err(|e| e.into())
+    h.await?.map_err(|e| e)
 }

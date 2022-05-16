@@ -14,7 +14,6 @@ impl Handler<SleepAddOne> for CounterActor {
     async fn handle(&mut self, _ctx: &mut xactor::Context<Self>, _msg: SleepAddOne) -> () {
         // tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         self.count += 1;
-        ()
     }
 }
 
