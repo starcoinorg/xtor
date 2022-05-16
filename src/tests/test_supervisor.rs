@@ -86,7 +86,7 @@ async fn test_supervisor_save_all() {
             .unwrap()
     }))
     .await;
-    let _ = actors.iter().next().unwrap().call::<Dummy, Die>(Die).await;
+    let _ = actors.get(0).unwrap().call::<Dummy, Die>(Die).await;
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     for a in actors {
         assert_eq!(a.call::<Dummy, IsAlive>(IsAlive).await.unwrap().1, 1);

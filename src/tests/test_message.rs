@@ -36,7 +36,6 @@ async fn test_single_actor_single_message_blocked_error() {
         .call::<TestActor, TestResultMessage<i32>>(TestResultMessage(Err(anyhow::anyhow!("error"))))
         .await;
     assert!(result.is_err());
-    assert!(actor.await_stop().await.unwrap() == ());
 }
 
 #[crate::test]
@@ -49,7 +48,6 @@ async fn test_single_actor_single_message_unblocked_error() {
         .await;
     // actor will stop as soon as the message is received
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    assert!(actor.await_stop().await.unwrap() == ());
     // and the channel for the message is closed
     assert!(result.await.is_err());
 }

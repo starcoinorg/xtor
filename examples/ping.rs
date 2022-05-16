@@ -27,7 +27,7 @@ impl Handler<Ping> for PingActor {
             Some(addr) => {
                 let n = self.n;
                 let _ = tokio::task::spawn(async move {
-                    addr.call_unblock::<PingActor, Ping>(Ping(msg.0 + n)).await
+                    addr.call_unblock::<PingActor, Ping>(Ping(msg.0 + n)).await.await
                 });
                 tokio::time::sleep(std::time::Duration::from_millis(self.sleeper as u64)).await;
                 self.counter
