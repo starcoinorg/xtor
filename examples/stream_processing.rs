@@ -86,10 +86,10 @@ async fn main() -> anyhow::Result<()> {
     // subscribe to broker
     try_join!(
         broker.call::<DefaultBroker<Number>, Subscribe<Number>>(
-            Subscribe::from_addr::<EvenSubscriptor>(even.clone()).await,
+            Subscribe::from_addr::<EvenSubscriptor>(&even).await,
         ),
         broker.call::<DefaultBroker<Number>, Subscribe<Number>>(
-            Subscribe::from_addr::<BigNumberSubscriptor>(big.clone()).await,
+            Subscribe::from_addr::<BigNumberSubscriptor>(&big).await,
         )
     )?;
 

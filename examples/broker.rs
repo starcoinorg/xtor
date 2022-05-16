@@ -77,9 +77,9 @@ async fn main() -> anyhow::Result<()> {
 
     // subscribe to broker
     try_join!(
-        subscribe_proxy.call(Subscribe::from_addr::<EvenSubscriptor>(even.clone()).await),
-        subscribe_proxy.call(Subscribe::from_addr::<OddSubscriptor>(odd.clone()).await),
-        subscribe_proxy.call(Subscribe::from_addr::<BigNumberSubscriptor>(big.clone()).await),
+        subscribe_proxy.call(Subscribe::from_addr::<EvenSubscriptor>(&even).await),
+        subscribe_proxy.call(Subscribe::from_addr::<OddSubscriptor>(&odd).await),
+        subscribe_proxy.call(Subscribe::from_addr::<BigNumberSubscriptor>(&big).await),
     )?;
 
     let broker_clone = broker.clone();

@@ -86,3 +86,39 @@ pub fn main(_args: TokenStream, input: TokenStream) -> TokenStream {
 
     expanded.into()
 }
+
+/// Xtor test derive
+/// # Examples
+/// ```ignore
+/// #[xtor::test]
+/// async fn test_xxx() {
+///    println!("Hello, world!");
+///    assert!(1 == 1);
+/// }
+/// ```
+///
+#[proc_macro_attribute]
+pub fn test(_args: TokenStream, input: TokenStream) -> TokenStream {
+    let mut input = syn::parse_macro_input!(input as syn::ItemFn);
+
+    let ident = &input.sig.ident.clone();
+
+    if input.sig.asyncness.is_none() {
+        return TokenStream::from(quote_spanned! { input.span() =>
+            compile_error!("only allow async functions to be tagged with #[xtor::test]"),
+        });
+    }
+
+    input.sig.ident = Ident::new("__test", Span::call_site());
+    let ret = &input.sig.output;
+
+    let expanded = quote! {
+        #[test]
+        fn #ident() #ret {
+            #input
+            xtor::block_on(async{let res = __test().await; xtor::await_exit().await; res})
+        }
+    };
+
+    expanded.into()
+}

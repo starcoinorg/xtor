@@ -35,7 +35,7 @@ pub struct Subscribe<T: Message + Sync + Clone> {
 }
 
 impl<T: Message + Sync + Clone> Subscribe<T> {
-    pub async fn from_addr<A: Handler<T>>(addr: Addr) -> Self {
+    pub async fn from_addr<A: Handler<T>>(addr: &Addr) -> Self {
         Self {
             addr: addr.downgrade(),
             proxy: addr.proxy::<A, T>().await,

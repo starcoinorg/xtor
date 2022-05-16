@@ -1,6 +1,6 @@
 [package]
 name = "xtor_derive"
-version = "0.9.0"
+version = "1.0.0"
 authors = ["lemonhx <lemonhx@lemonhx.tech>"]
 edition = "2021"
 license = "MIT"

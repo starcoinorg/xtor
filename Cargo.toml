@@ -19,7 +19,7 @@ anyhow = { version = "1" }
 futures = "0.3"
 lazy_static = "1"
 dashmap = "5.2"
-xtor_derive = "0.9"
+xtor_derive = {version = "1.0", path = "xtor_derive"}
 
 # bench marks and tests
 [dev-dependencies]

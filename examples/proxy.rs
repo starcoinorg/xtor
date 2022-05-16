@@ -1,10 +1,6 @@
 use anyhow::Result;
 use std::sync::atomic::AtomicUsize;
-use xtor::actor::{
-    context::Context,
-    message::Handler,
-    runner::{Actor, ActorRunner},
-};
+use xtor::actor::{context::Context, message::Handler, runner::Actor};
 
 #[xtor::message(result = "()")]
 struct AddOne;

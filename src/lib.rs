@@ -62,6 +62,7 @@ mod tests;
 
 pub use xtor_derive::main;
 pub use xtor_derive::message;
+pub use xtor_derive::test;
 
 /// the core of xtor
 pub mod actor;
