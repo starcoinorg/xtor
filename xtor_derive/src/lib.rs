@@ -101,7 +101,7 @@ pub fn main(_args: TokenStream, input: TokenStream) -> TokenStream {
 pub fn test(_args: TokenStream, input: TokenStream) -> TokenStream {
     let mut input = syn::parse_macro_input!(input as syn::ItemFn);
 
-    let ident = &input.sig.ident.clone();
+    let ident = input.sig.ident.clone();
 
     if input.sig.asyncness.is_none() {
         return TokenStream::from(quote_spanned! { input.span() =>
