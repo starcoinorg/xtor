@@ -20,7 +20,6 @@ impl actix::Handler<SleepAddOne> for CounterActor {
     fn handle(&mut self, _msg: SleepAddOne, _ctx: &mut actix::Context<Self>) -> Self::Result {
         // std::thread::sleep(std::time::Duration::from_millis(10));
         self.count += 1;
-        
     }
 }
 
