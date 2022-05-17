@@ -37,7 +37,8 @@ path = "benches/bench_main_async.rs"
 
 [workspace]
 members = [
-    "xtor_derive"
+    "xtor_derive",
+    "xtor_tracing"
 ]
 
 [features]
