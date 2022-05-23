@@ -1,6 +1,6 @@
 # Xtor: An handler async actor framework.
-[![Rust](https://github.com/starcoinorg/xtor/actions/workflows/rust.yml/badge.svg)](https://github.com/starcoinorg/xtor/actions/workflows/rust.yml)
-
+[![CI](https://github.com/starcoinorg/xtor/actions/workflows/rust.yml/badge.svg)](https://github.com/starcoinorg/xtor/actions/workflows/rust.yml)
+[![Crates](https://img.shields.io/crates/v/xtor)](https://crates.io/crates/xtor)
 ## Key features
 - small: very small codebase
 - async: allow you to write async code in your actor
