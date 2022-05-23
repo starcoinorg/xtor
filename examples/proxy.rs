@@ -1,10 +1,12 @@
 use anyhow::Result;
 use std::sync::atomic::AtomicUsize;
+use tracing::info;
 use xtor::actor::{context::Context, message::Handler, runner::Actor};
 
 #[xtor::message(result = "()")]
 struct AddOne;
 
+#[derive(Debug)]
 #[xtor::message(result = "()")]
 struct Print;
 
@@ -13,11 +15,7 @@ struct CounterActor {
 }
 
 #[async_trait::async_trait]
-impl Actor for CounterActor {
-    async fn on_stop(&self, ctx: &Context) {
-        println!("{} stop", self.get_name_or_id_string(ctx).await);
-    }
-}
+impl Actor for CounterActor {}
 
 #[async_trait::async_trait]
 impl Handler<AddOne> for CounterActor {
@@ -30,14 +28,21 @@ impl Handler<AddOne> for CounterActor {
 
 #[async_trait::async_trait]
 impl Handler<Print> for CounterActor {
+    #[tracing::instrument(
+        skip(self,_ctx),
+        name = "CounterActor::Print",
+        fields(addr = self.get_name_or_id_string(_ctx).as_str())
+    )]
     async fn handle(&self, _ctx: &xtor::actor::context::Context, _msg: Print) -> Result<()> {
-        println!("{}", self.counter.load(std::sync::atomic::Ordering::SeqCst));
+        info!("{}", self.counter.load(std::sync::atomic::Ordering::SeqCst));
         Ok(())
     }
 }
 
 #[xtor::main]
 async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt::init();
+
     // create actor
     let addr = CounterActor {
         counter: AtomicUsize::new(0),

@@ -11,11 +11,12 @@
   - [x] broker
   - [x] service
   - [x] proxy
-- [ ] stream processing
+- [x] stream processing
   - [x] by broker
+- [x] tokio tracing
 
 ### Issues and bug fix
-- [ ] #1
+- [x] #1
 
 ## before 2.0.0
 ### key features

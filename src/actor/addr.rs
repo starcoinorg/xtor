@@ -62,17 +62,17 @@ impl Addr {
     }
 
     /// get the name or id of the actor
-    pub async fn get_name_or_id_string(&self) -> String {
-        let name = self.get_name().await;
+    pub fn get_name_or_id_string(&self) -> String {
+        let name = self.get_name();
         if let Some(name) = name {
-            name
+            format!("<{}:{}>", name, self.id)
         } else {
-            self.id.to_string()
+            format!("<anonymous actor:{}>", self.id)
         }
     }
 
     /// get the name of the actor
-    pub async fn get_name(&self) -> Option<String> {
+    pub fn get_name(&self) -> Option<String> {
         ACTOR_ID_NAME.get(&self.id)?.clone()
     }
 
@@ -238,16 +238,16 @@ pub struct WeakAddr {
 }
 
 impl WeakAddr {
-    pub async fn get_name_or_id_string(&self) -> String {
-        let name = self.get_name().await;
+    pub fn get_name_or_id_string(&self) -> String {
+        let name = self.get_name();
         if let Some(name) = name {
-            name
+            format!("<{}:{}>", name, self.id)
         } else {
-            self.id.to_string()
+            format!("<anonymous actor:{}>", self.id)
         }
     }
 
-    pub async fn get_name(&self) -> Option<String> {
+    pub fn get_name(&self) -> Option<String> {
         ACTOR_ID_NAME.get(&self.id)?.clone()
     }
 

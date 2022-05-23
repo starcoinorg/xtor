@@ -11,6 +11,7 @@ use futures::{
 };
 use lazy_static::lazy_static;
 use tokio::task::JoinHandle;
+use tracing::{info, warn};
 
 use super::{
     addr::{Addr, Event, WeakAddr},
@@ -29,20 +30,32 @@ pub type ActorID = u64;
 #[async_trait::async_trait]
 pub trait Actor: Send + Sync + 'static {
     /// hook for actor initialization
+    #[tracing::instrument(
+        skip(self,_ctx),
+        fields(addr = self.get_name_or_id_string(_ctx).as_str())
+    )]
     async fn on_start(&self, _ctx: &Context) -> Result<()> {
+        info!("{} start", self.get_name_or_id_string(_ctx));
         Ok(())
     }
     /// hook for actor shutdown
-    async fn on_stop(&self, _ctx: &Context) {}
+    #[tracing::instrument(
+        skip(self,_ctx),
+        fields(addr = self.get_name_or_id_string(_ctx).as_str())
+    )]
+    async fn on_stop(&self, _ctx: &Context) {
+        info!("{} stop", self.get_name_or_id_string(_ctx));
+    }
     /// check the name of the actor
-    async fn get_name(&self, ctx: &Context) -> Option<String> {
+    fn get_name(&self, ctx: &Context) -> Option<String> {
         ACTOR_ID_NAME.get(&ctx.id)?.clone()
     }
-    async fn get_name_or_id_string(&self, ctx: &Context) -> String {
-        if let Some(name) = self.get_name(ctx).await {
-            name
+    fn get_name_or_id_string(&self, ctx: &Context) -> String {
+        let name = self.get_name(ctx);
+        if let Some(name) = name {
+            format!("<{}:{}>", name, ctx.id)
         } else {
-            format!("{}", ctx.id)
+            format!("<anonymous actor:{}>", ctx.id)
         }
     }
     /// starting an actor
@@ -204,5 +217,11 @@ impl ActorRunner {
 /// WARNING: default is do nothing
 #[async_trait::async_trait]
 pub trait ActorRestart {
-    async fn on_restart(&self, _addr: &WeakAddr) {}
+    #[tracing::instrument(
+        skip(self),
+        fields(addr = _addr.get_name_or_id_string().as_str())
+    )]
+    async fn on_restart(&self, _addr: &WeakAddr) {
+        warn!("{} restarted", _addr.get_name_or_id_string().as_str());
+    }
 }

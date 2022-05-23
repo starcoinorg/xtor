@@ -2,8 +2,10 @@ use anyhow::Result;
 use futures::{join, try_join};
 use once_cell::sync::OnceCell;
 use std::sync::atomic::AtomicUsize;
+use tracing::info;
 use xtor::actor::{addr::WeakAddr, context::Context, message::Handler, runner::Actor};
 
+#[derive(Debug, Clone)]
 #[xtor::message(result = "isize")]
 struct Ping(isize);
 
@@ -21,8 +23,13 @@ impl Actor for PingActor {}
 
 #[async_trait::async_trait]
 impl Handler<Ping> for PingActor {
+    #[tracing::instrument(
+        skip(self, ctx),
+        name = "PingActor::Ping",
+        fields(addr = self.get_name_or_id_string(ctx).as_str())
+    )]
     async fn handle(&self, ctx: &Context, msg: Ping) -> Result<isize> {
-        println!("{}: {}", self.get_name_or_id_string(ctx).await, msg.0);
+        info!("{:?} received", &msg);
         match self.ping_address.get().expect("fail to get").upgrade() {
             Some(addr) => {
                 let n = self.n;
@@ -53,6 +60,8 @@ impl Handler<SetPingAddress> for PingActor {
 
 #[xtor::main]
 async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt::init();
+
     // create actors
     let (ping_addr, pong_addr) = try_join!(
         PingActor {

@@ -15,6 +15,7 @@ use std::sync::atomic::AtomicBool;
 
 use futures::{join, try_join};
 use rand::{prelude::StdRng, Rng, SeedableRng};
+use tracing::{error, info, warn};
 use xtor::{
     actor::{
         addr::WeakAddr,
@@ -37,8 +38,12 @@ impl Actor for Human {}
 
 #[async_trait::async_trait]
 impl ActorRestart for Human {
+    #[tracing::instrument(
+        skip(self),
+        fields(addr = addr.get_name_or_id_string().as_str())
+    )]
     async fn on_restart(&self, addr: &WeakAddr) {
-        println!("\thospital saved {}", addr.get_name_or_id_string().await);
+        warn!("\thospital saved {}", addr.get_name_or_id_string());
         self.0.store(false, std::sync::atomic::Ordering::SeqCst);
     }
 }
@@ -49,21 +54,27 @@ enum Food {
     Poisoned(&'static str),
 }
 
+#[derive(Debug)]
 #[xtor::message(result = "()")]
 struct Eat(Food);
 
 #[async_trait::async_trait]
 impl Handler<Eat> for Human {
+    #[tracing::instrument(
+        skip(self, ctx),
+        name = "Human::Eat",
+        fields(addr = self.get_name_or_id_string(ctx).as_str())
+    )]
     async fn handle(&self, ctx: &Context, msg: Eat) -> anyhow::Result<()> {
         match msg.0 {
             Food::Normal(food) => {
-                println!("{} eat {:?}", self.get_name_or_id_string(ctx).await, food);
+                info!("{} eat {:?}", self.get_name_or_id_string(ctx), food);
                 Ok(())
             }
             Food::Poisoned(food) => {
-                println!(
+                error!(
                     "{} eat {:?}, and dead",
-                    self.get_name_or_id_string(ctx).await,
+                    self.get_name_or_id_string(ctx),
                     food
                 );
                 self.0.store(true, std::sync::atomic::Ordering::SeqCst);
@@ -73,16 +84,19 @@ impl Handler<Eat> for Human {
     }
 }
 
+#[derive(Debug)]
 #[xtor::message(result = "()")]
 struct Virus;
 
 #[async_trait::async_trait]
 impl Handler<Virus> for Human {
+    #[tracing::instrument(
+        skip(self, ctx),
+        name = "Human::Virus",
+        fields(addr = self.get_name_or_id_string(ctx).as_str())
+    )]
     async fn handle(&self, ctx: &Context, _msg: Virus) -> anyhow::Result<()> {
-        println!(
-            "{} infected, and dead",
-            self.get_name_or_id_string(ctx).await
-        );
+        error!("{} infected, and dead", self.get_name_or_id_string(ctx));
         self.0.store(true, std::sync::atomic::Ordering::SeqCst);
         Err(anyhow::anyhow!("dead"))
     }
@@ -90,7 +104,9 @@ impl Handler<Virus> for Human {
 
 #[xtor::main]
 async fn main() -> anyhow::Result<()> {
-    let system_running_duration = 10;
+    tracing_subscriber::fmt::init();
+
+    let system_running_duration = 20;
 
     // create supervisor actor
     let (normal_hospital, virus_hospital) = try_join!(
@@ -152,6 +168,8 @@ async fn main() -> anyhow::Result<()> {
             Food::Normal("apple"),
             Food::Normal("banana"),
             Food::Normal("orange"),
+            Food::Normal("pear"),
+            Food::Normal("grape"),
             Food::Poisoned("red mushroom"),
         ];
         let start = std::time::Instant::now();
@@ -169,11 +187,11 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    let humans = [alice.clone(), bob.clone()];
+    let humans = [alice.clone(), bob.clone(), carl.clone(), david.clone()];
     let virus_inflecter = tokio::task::spawn(async move {
         let start = std::time::Instant::now();
         while start.elapsed().as_secs() < system_running_duration {
-            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
             let mut rng = StdRng::from_entropy();
             let selected_human = humans
                 .get(rng.gen_range(0..humans.len()))

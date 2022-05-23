@@ -2,6 +2,7 @@ use std::sync::atomic::AtomicUsize;
 
 use futures::{try_join, Stream};
 
+use tracing::info;
 use xtor::{
     actor::{context::Context, message::Handler, runner::Actor},
     broker::Subscribe,
@@ -36,16 +37,17 @@ impl Stream for RangeStream {
 
 struct EvenSubscriptor;
 #[async_trait::async_trait]
-impl Actor for EvenSubscriptor {
-    async fn on_stop(&self, _ctx: &Context) {
-        println!("EvenSubscriptor stopped");
-    }
-}
+impl Actor for EvenSubscriptor {}
 #[async_trait::async_trait]
 impl Handler<Number> for EvenSubscriptor {
+    #[tracing::instrument(
+        skip(self, _ctx),
+        name = "EvenSubscriptor::Number",
+        fields(addr = self.get_name_or_id_string(_ctx).as_str())
+    )]
     async fn handle(&self, _ctx: &Context, msg: Number) -> anyhow::Result<()> {
         if msg.0 % 2 == 0 {
-            println!("Even: {:?} received", &msg);
+            info!("Even: {:?} received", &msg);
         }
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         Ok(())
@@ -54,17 +56,18 @@ impl Handler<Number> for EvenSubscriptor {
 
 struct BigNumberSubscriptor;
 #[async_trait::async_trait]
-impl Actor for BigNumberSubscriptor {
-    async fn on_stop(&self, _ctx: &Context) {
-        println!("BigNumberSubscriptor stopped");
-    }
-}
+impl Actor for BigNumberSubscriptor {}
 
 #[async_trait::async_trait]
 impl Handler<Number> for BigNumberSubscriptor {
+    #[tracing::instrument(
+        skip(self, _ctx),
+        name = "BigNumberSubscriptor::Number",
+        fields(addr = self.get_name_or_id_string(_ctx).as_str())
+    )]
     async fn handle(&self, _ctx: &Context, msg: Number) -> anyhow::Result<()> {
         if msg.0 > 5 {
-            println!("Big: {:?} received", &msg);
+            info!("Big: {:?} received", &msg);
         }
         Ok(())
     }
@@ -72,6 +75,8 @@ impl Handler<Number> for BigNumberSubscriptor {
 
 #[xtor::main]
 async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt::init();
+
     let stream = RangeStream {
         current: AtomicUsize::new(0),
         end: 10,

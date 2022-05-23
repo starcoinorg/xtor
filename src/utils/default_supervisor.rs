@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use dashmap::DashMap;
 use futures::{channel::mpsc, lock::Mutex};
+use tracing::info;
 
 use crate::actor::{
     addr::Addr,
@@ -36,7 +37,12 @@ impl DefaultSupervisor {
 
 #[async_trait::async_trait]
 impl Actor for DefaultSupervisor {
+    #[tracing::instrument(
+        skip(self, _ctx),
+        fields(addr = self.get_name_or_id_string(_ctx).as_str())
+    )]
     async fn on_stop(&self, _ctx: &Context) {
+        info!("{} stop", self.get_name_or_id_string(_ctx));
         self.supervised_actors.clear();
     }
 }
