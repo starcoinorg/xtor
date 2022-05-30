@@ -1,11 +1,13 @@
-use std::sync::{Arc, Weak};
+use std::{
+    lazy::SyncOnceCell,
+    sync::{Arc, Weak},
+};
 
 use futures::{
     channel::{mpsc, oneshot},
     future::{join_all, Shared},
     lock::Mutex,
 };
-use once_cell::sync::OnceCell;
 
 use super::{
     addr::{Event, WeakAddr},
@@ -20,7 +22,7 @@ pub struct Context {
     tx: Weak<mpsc::UnboundedSender<Event>>,
     pub(crate) rx_exit: Shared<oneshot::Receiver<()>>,
     pub(crate) supervisors: Mutex<Vec<Proxy<Restart>>>,
-    pub(crate) addr: OnceCell<WeakAddr>,
+    pub(crate) addr: SyncOnceCell<WeakAddr>,
 }
 
 unsafe impl Send for Context {}
@@ -44,7 +46,7 @@ impl Context {
                 tx: weak_tx,
                 rx_exit,
                 supervisors: Mutex::new(vec![]),
-                addr: OnceCell::new(),
+                addr: SyncOnceCell::new(),
             },
             rx,
             tx,

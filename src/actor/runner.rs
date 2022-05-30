@@ -1,4 +1,7 @@
-use std::sync::{atomic::AtomicU64, Arc};
+use std::{
+    lazy::SyncLazy,
+    sync::{atomic::AtomicU64, Arc},
+};
 
 use anyhow::Result;
 use dashmap::DashMap;
@@ -9,7 +12,6 @@ use futures::{
     },
     FutureExt, StreamExt,
 };
-use lazy_static::lazy_static;
 use tokio::task::JoinHandle;
 use tracing::{info, warn};
 
@@ -20,10 +22,9 @@ use super::{
 
 pub(crate) static ACTOR_ID: AtomicU64 = AtomicU64::new(0);
 
-lazy_static! {
-    pub static ref ACTOR_ID_NAME: DashMap<u64, Option<String>> = DashMap::new();
-    pub static ref ACTOR_ID_HANDLE: DashMap<u64, JoinHandle<Result<()>>> = DashMap::new();
-}
+pub static ACTOR_ID_NAME: SyncLazy<DashMap<u64, Option<String>>> = SyncLazy::new(DashMap::new);
+pub static ACTOR_ID_HANDLE: SyncLazy<DashMap<u64, JoinHandle<Result<()>>>> =
+    SyncLazy::new(DashMap::new);
 
 pub type ActorID = u64;
 
@@ -59,8 +60,8 @@ pub trait Actor: Send + Sync + 'static {
         }
     }
     /// starting an actor
-    /// if you want a supervised actor you need to send message to supervisor instead starting it from here
-    /// `?Sized` actor is not supported
+    /// if you want a supervised actor you need to send message to supervisor
+    /// instead starting it from here `?Sized` actor is not supported
     async fn spawn(self) -> Result<Addr>
     where
         Self: Sized,
@@ -102,6 +103,7 @@ impl ActorRunner {
             tx_exit,
         }
     }
+
     pub async fn run<A: Actor>(self, actor: A) -> Result<Addr> {
         let Self {
             ctx,

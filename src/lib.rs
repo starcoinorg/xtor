@@ -4,7 +4,8 @@
 //! ## Key features
 //! - small: very small codebase
 //! - async: allow you to write async code in your actor
-//! - full featured: we have built-in types such as `Supervisor` `Broker` `Caller` and so on
+//! - full featured: we have built-in types such as `Supervisor` `Broker`
+//!   `Caller` and so on
 //! - both dynamic and fast: typed message and weak typed event.
 //!
 //! ## usage
@@ -49,20 +50,17 @@
 //!
 //! ## More Examples?
 //! please take a look at the examples folder in the [repository](https://github.com/starcoinorg/xtor).
-//!
 
 #![feature(type_name_of_val)]
+#![feature(once_cell)]
 
 use actor::runner::ACTOR_ID_HANDLE;
-
 use futures::Future;
 
 #[cfg(test)]
 mod tests;
 
-pub use xtor_derive::main;
-pub use xtor_derive::message;
-pub use xtor_derive::test;
+pub use xtor_derive::{main, message, test};
 
 /// the core of xtor
 pub mod actor;

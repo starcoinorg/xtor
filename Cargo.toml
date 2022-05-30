@@ -14,10 +14,8 @@ description = "Async Actor framework for Rust which is blazing fast and rock sol
 [dependencies]
 tokio = {version = "^1", features = ["full"]}
 async-trait = "0.1"
-once_cell = "1.5"
 anyhow = { version = "1" }
 futures = "0.3"
-lazy_static = "1"
 dashmap = "5.2"
 xtor_derive = {version = "0.9", path = "xtor_derive"}
 tracing = "0.1"
@@ -25,6 +23,7 @@ tracing = "0.1"
 # bench marks and tests
 [dev-dependencies]
 criterion = {version = "0.3.2", features = ["html_reports"]}
+once_cell = "1.5"
 actix = "0.13.0"
 async-trait = "0.1.24"
 tokio-test = "0.4.2"

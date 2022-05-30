@@ -1,7 +1,8 @@
+use std::sync::atomic::AtomicUsize;
+
 use anyhow::Result;
 use futures::{join, try_join};
 use once_cell::sync::OnceCell;
-use std::sync::atomic::AtomicUsize;
 use tracing::info;
 use xtor::actor::{addr::WeakAddr, context::Context, message::Handler, runner::Actor};
 
