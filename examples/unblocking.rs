@@ -1,6 +1,5 @@
 use futures::{join, try_join};
 use rand::{prelude::StdRng, Rng, SeedableRng};
-
 use tracing::{info, warn};
 use xtor::actor::{context::Context, message::Handler, runner::Actor};
 

@@ -9,7 +9,8 @@
 // virus is contagious.
 // virus can infect human.
 // virus_hospital will respawn all human if even only one human is dead.
-// virus_hospital is not very clever, for every desease it will think that it is a virus.
+// virus_hospital is not very clever, for every desease it will think that it is
+// a virus.
 
 use std::sync::atomic::AtomicBool;
 
@@ -140,7 +141,8 @@ async fn main() -> anyhow::Result<()> {
         .chain_link_to_supervisor(&normal_hospital_proxy)
         .await?;
     // bob said that he has a very strong body
-    // thus virus could not come out so he decided to only paying the normal hospital
+    // thus virus could not come out so he decided to only paying the normal
+    // hospital
 
     let carl = Human::default()
         .spawn_supervisable()

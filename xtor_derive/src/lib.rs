@@ -3,8 +3,9 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::{quote, quote_spanned};
-use syn::spanned::Spanned;
-use syn::{parse_macro_input, AttributeArgs, DeriveInput, Error, Meta, NestedMeta};
+use syn::{
+    parse_macro_input, spanned::Spanned, AttributeArgs, DeriveInput, Error, Meta, NestedMeta,
+};
 
 /// Xtor Message Derive
 ///
@@ -56,7 +57,6 @@ pub fn message(args: TokenStream, input: TokenStream) -> TokenStream {
 ///    println!("Hello, world!");
 /// }
 /// ```
-///
 #[proc_macro_attribute]
 pub fn main(_args: TokenStream, input: TokenStream) -> TokenStream {
     let mut input = syn::parse_macro_input!(input as syn::ItemFn);
@@ -96,7 +96,6 @@ pub fn main(_args: TokenStream, input: TokenStream) -> TokenStream {
 ///    assert!(1 == 1);
 /// }
 /// ```
-///
 #[proc_macro_attribute]
 pub fn test(_args: TokenStream, input: TokenStream) -> TokenStream {
     let mut input = syn::parse_macro_input!(input as syn::ItemFn);

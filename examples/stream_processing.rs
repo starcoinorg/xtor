@@ -1,7 +1,6 @@
 use std::sync::atomic::AtomicUsize;
 
 use futures::{try_join, Stream};
-
 use tracing::info;
 use xtor::{
     actor::{context::Context, message::Handler, runner::Actor},
@@ -20,6 +19,7 @@ struct RangeStream {
 
 impl Stream for RangeStream {
     type Item = Number;
+
     fn poll_next(
         self: std::pin::Pin<&mut Self>,
         _cx: &mut std::task::Context<'_>,
