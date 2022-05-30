@@ -3,8 +3,8 @@ use async_trait::async_trait;
 use tracing::info;
 use xtor::actor::{context::Context, message::Handler, runner::Actor};
 // first define actor
-struct HelloAector;
-impl Actor for HelloAector {}
+struct HelloActor;
+impl Actor for HelloActor {}
 
 // then define message
 #[xtor::message(result = "()")]
@@ -13,10 +13,10 @@ struct Hello;
 
 // then impl the handler
 #[async_trait]
-impl Handler<Hello> for HelloAector {
+impl Handler<Hello> for HelloActor {
     #[tracing::instrument(
         skip(self,_ctx),
-        name = "HelloAector::Hello",
+        name = "HelloActor::Hello",
         fields(addr = self.get_name_or_id_string(_ctx).as_str())
     )]
     async fn handle(&self, _ctx: &Context, msg: Hello) -> Result<()> {
@@ -29,7 +29,7 @@ impl Handler<Hello> for HelloAector {
 #[xtor::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
-    let hello_actor = HelloAector;
+    let hello_actor = HelloActor;
     let hello_actor_address = hello_actor.spawn().await?;
-    hello_actor_address.call::<HelloAector, Hello>(Hello).await
+    hello_actor_address.call::<HelloActor, Hello>(Hello).await
 }
