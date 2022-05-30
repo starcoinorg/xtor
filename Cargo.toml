@@ -1,6 +1,6 @@
 [package]
 name = "xtor"
-version = "0.9.9"
+version = "0.9.10"
 authors = ["lemonhx <lemonhx@lemonhx.tech>"]
 edition = "2021"
 license = "MIT"
@@ -17,7 +17,7 @@ async-trait = "0.1"
 anyhow = { version = "1" }
 futures = "0.3"
 dashmap = "5.2"
-xtor_derive = {version = "0.9", path = "xtor_derive"}
+xtor_derive = {version = "0.9.9", path = "xtor_derive"}
 tracing = "0.1"
 
 # bench marks and tests
