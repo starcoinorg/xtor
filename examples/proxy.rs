@@ -1,7 +1,8 @@
-use anyhow::Result;
 use std::sync::atomic::AtomicUsize;
+
+use anyhow::Result;
 use tracing::info;
-use xtor::actor::{context::Context, message::Handler, runner::Actor};
+use xtor::actor::{message::Handler, runner::Actor};
 
 #[xtor::message(result = "()")]
 struct AddOne;
