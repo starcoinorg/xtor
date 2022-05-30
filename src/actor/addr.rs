@@ -1,26 +1,26 @@
-use std::hash::Hash;
-use std::pin::Pin;
-use std::sync::Arc;
-use std::sync::Weak;
-use std::time::Duration;
+use std::{
+    hash::Hash,
+    pin::Pin,
+    sync::{Arc, Weak},
+    time::Duration,
+};
 
-use crate::Supervise;
-
-use super::context::Context;
-use super::message::Handler;
-use super::message::Message;
-use super::proxy::Proxy;
-use super::proxy::ProxyFnBlock;
-use super::runner::ActorID;
-use super::runner::ACTOR_ID_NAME;
-use super::supervisor::Restart;
-use super::ACTOR_ID_HANDLE;
 use anyhow::Result;
-use futures::channel::mpsc;
-use futures::channel::oneshot;
-use futures::future::Shared;
+use futures::{
+    channel::{mpsc, oneshot},
+    future::Shared,
+    Future,
+};
 
-use futures::Future;
+use super::{
+    context::Context,
+    message::{Handler, Message},
+    proxy::{Proxy, ProxyFnBlock},
+    runner::{ActorID, ACTOR_ID_NAME},
+    supervisor::Restart,
+    ACTOR_ID_HANDLE,
+};
+use crate::Supervise;
 
 pub(crate) type ExecFuture<'a> = Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>;
 pub(crate) type ExecFn =
@@ -87,6 +87,7 @@ impl Addr {
     pub fn stop(self, err: Result<()>) {
         let _ = mpsc::UnboundedSender::clone(&*self.tx).start_send(Event::Stop(err));
     }
+
     /// Raw exec is not recommended to use, please use `call` or `send` instead
     pub fn exec(self, f: ExecFn) {
         mpsc::UnboundedSender::clone(&*self.tx)
@@ -106,19 +107,27 @@ impl Addr {
         msg: T,
     ) -> oneshot::Receiver<anyhow::Result<T::Result>> {
         let (tx, rx) = oneshot::channel();
-        let _ = mpsc::UnboundedSender::clone(&*self.tx).start_send(Event::Exec(Box::new(move |actor, ctx| {
-            Box::pin(async move {
-                match actor.as_ref().downcast_ref::<A>() {
-                    Some(handler) => {
-                        match handler.handle(ctx, msg).await {
-                            Ok(res) => {let _ = tx.send(Ok(res));Ok(())},
+        let _ = mpsc::UnboundedSender::clone(&*self.tx).start_send(Event::Exec(Box::new(
+            move |actor, ctx| {
+                Box::pin(async move {
+                    match actor.as_ref().downcast_ref::<A>() {
+                        Some(handler) => match handler.handle(ctx, msg).await {
+                            Ok(res) => {
+                                let _ = tx.send(Ok(res));
+                                Ok(())
+                            }
                             Err(e) => Err(e),
-                        }
-                    },
-                    None => Err(anyhow::anyhow!("error: {} trying to handle a message in actor which you didn't implement the handler trait {} for it", std::any::type_name_of_val(&actor), std::any::type_name::<dyn Handler::<T>>())),
-                }
-            })
-        })));
+                        },
+                        None => Err(anyhow::anyhow!(
+                            "error: {} trying to handle a message in actor which you didn't \
+                             implement the handler trait {} for it",
+                            std::any::type_name_of_val(&actor),
+                            std::any::type_name::<dyn Handler::<T>>()
+                        )),
+                    }
+                })
+            },
+        )));
         rx
     }
 
@@ -140,8 +149,8 @@ impl Addr {
     }
 
     /// create a proxy (like delegate in C#)
-    /// you only needs to care the lifetime and the type when you trying to create
-    /// when you calling to proxy, the type of actor is not needed.
+    /// you only needs to care the lifetime and the type when you trying to
+    /// create when you calling to proxy, the type of actor is not needed.
     pub async fn proxy<A: Handler<T>, T: Message>(&self) -> Proxy<T> {
         let weak_tx = Arc::downgrade(&self.tx);
         let inner: ProxyFnBlock<T> = Box::new(move |msg| {
@@ -151,19 +160,27 @@ impl Addr {
                 let ttx = weak_tx
                     .upgrade()
                     .ok_or_else(|| anyhow::anyhow!("error: proxy tx is dropped"))?;
-                mpsc::UnboundedSender::clone(&*ttx).start_send(Event::Exec(Box::new(move |actor, ctx| {
-                    Box::pin(async move {
-                        match actor.as_ref().downcast_ref::<A>() {
-                            Some(handler) => {
-                                match handler.handle(ctx, msg).await {
-                                    Ok(res) => {let _ = tx.send(Ok(res));Ok(())},
+                mpsc::UnboundedSender::clone(&*ttx).start_send(Event::Exec(Box::new(
+                    move |actor, ctx| {
+                        Box::pin(async move {
+                            match actor.as_ref().downcast_ref::<A>() {
+                                Some(handler) => match handler.handle(ctx, msg).await {
+                                    Ok(res) => {
+                                        let _ = tx.send(Ok(res));
+                                        Ok(())
+                                    }
                                     Err(e) => Err(e),
-                                }
-                            },
-                            None => Err(anyhow::anyhow!("error: {} trying to handle a message in actor which you didn't implement the handler trait {} for it", std::any::type_name_of_val(&actor), std::any::type_name::<dyn Handler::<T>>())),
-                        }
-                    })
-                    })))?;
+                                },
+                                None => Err(anyhow::anyhow!(
+                                    "error: {} trying to handle a message in actor which you \
+                                     didn't implement the handler trait {} for it",
+                                    std::any::type_name_of_val(&actor),
+                                    std::any::type_name::<dyn Handler::<T>>()
+                                )),
+                            }
+                        })
+                    },
+                )))?;
                 Ok(rx)
             })
         });
@@ -188,6 +205,7 @@ impl Addr {
     pub async fn await_stop(&self) -> Result<()> {
         self.rx_exit.clone().await.map_err(|err| err.into())
     }
+
     /// # Safety
     ///
     /// may lead to deadlock and memory leak

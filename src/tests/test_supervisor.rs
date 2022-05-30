@@ -1,8 +1,7 @@
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 
-use crate::{utils::default_supervisor::DefaultSupervisor, ActorRestart, Supervise, WeakAddr};
-
 use super::*;
+use crate::{utils::default_supervisor::DefaultSupervisor, ActorRestart, Supervise, WeakAddr};
 
 struct Dummy(AtomicBool, AtomicUsize);
 impl Default for Dummy {

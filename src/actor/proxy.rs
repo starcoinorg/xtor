@@ -1,8 +1,7 @@
 use std::pin::Pin;
 
-use futures::{channel::oneshot, Future};
-
 use anyhow::Result;
+use futures::{channel::oneshot, Future};
 
 use super::{message::Message, runner::ActorID};
 

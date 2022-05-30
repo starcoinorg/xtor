@@ -1,11 +1,10 @@
 use std::sync::atomic::AtomicUsize;
 
+use super::*;
 use crate::{
     broker::{Publish, Subscribe},
     utils::default_broker::DefaultBroker,
 };
-
-use super::*;
 
 struct TestState(AtomicUsize);
 impl Default for TestState {
